@@ -468,7 +468,7 @@ function initMap() {
     const md = medOf(z), col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
     const h = hull(pts); if (h.length < 3) return;
-    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.08 : 0.38, strokeColor: col, strokeOpacity: 0.95, strokeWeight: 3, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
+    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.05 : 0.18, strokeColor: col, strokeOpacity: 0.95, strokeWeight: 3, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
     const top = h.reduce((a, p) => p.y > a.y ? p : a, h[0]);
     new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + (md == null ? " · 매출 미확인" : " · 중앙값 " + Math.round(md).toLocaleString() + "만") + '</div>', anchor: new naver.maps.Point(0, 0) } });
   });
