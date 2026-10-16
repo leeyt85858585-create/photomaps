@@ -209,7 +209,15 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
       <div class="mapctl">
         <button id="lgbtn" class="lgbtn" type="button" aria-expanded="false">범례 ▸</button>
         <div class="legend" id="legend" hidden>
-        <div class="title">권역 면(중앙값, 추정 실매출=상한+400, 만원): 연한 색 &lt;1,000 → 진한 색 5,000↑ · 점선 회색=매출 미확인</div>
+        <div class="title">권역 면 색 = 추정 실매출 중앙값 (상한+400, 만원)</div>
+        <div class="row">
+          <span class="it"><span class="dot" style="background:#ffe08a;border-radius:3px"></span>~1,000</span>
+          <span class="it"><span class="dot" style="background:#ffb347;border-radius:3px"></span>~2,000</span>
+          <span class="it"><span class="dot" style="background:#f2762e;border-radius:3px"></span>~3,000</span>
+          <span class="it"><span class="dot" style="background:#d13b1f;border-radius:3px"></span>~5,000</span>
+          <span class="it"><span class="dot" style="background:#8a1a14;border-radius:3px"></span>5,000 이상</span>
+          <span class="it"><span class="dot" style="background:transparent;border:2px dashed #6f7e8a;border-radius:3px"></span>매출 미확인</span>
+        </div>
         <div class="title">점: 오픈업 추정매출 상한 (만원, 기준월은 지역별로 다름)</div>
         <div class="row">
           <span class="it"><span class="dot" style="background:#cfe4ec"></span>~500</span>
@@ -454,13 +462,13 @@ function hull(pts) {
 }
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT } });
-  const TIER = [[1000, "#cfe4ec"], [2000, "#95c4d4"], [3000, "#4f9fb9"], [5000, "#1f6f8f"], [1e9, "#0a3d58"]];
+  const TIER = [[1000, "#ffe08a"], [2000, "#ffb347"], [3000, "#f2762e"], [5000, "#d13b1f"], [1e9, "#8a1a14"]];
   const medOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   AREAS.forEach(([z, label, col0]) => {
     const md = medOf(z), col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
     const h = hull(pts); if (h.length < 3) return;
-    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.06 : 0.28, strokeColor: md == null ? col : "#16212b", strokeOpacity: md == null ? 0.7 : 0.55, strokeWeight: md == null ? 2 : 1.5, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
+    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.08 : 0.38, strokeColor: col, strokeOpacity: 0.95, strokeWeight: 3, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
     const top = h.reduce((a, p) => p.y > a.y ? p : a, h[0]);
     new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + (md == null ? " · 매출 미확인" : " · 중앙값 " + Math.round(md).toLocaleString() + "만") + '</div>', anchor: new naver.maps.Point(0, 0) } });
   });
