@@ -200,6 +200,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
       <span>오픈업에만 <b id="cOnly">0</b>곳</span>
       <span>상호 확인 필요 <b id="cDiff">0</b>곳</span>
       <span>방문 완료 <b id="cVisit">0</b>곳</span>
+      <span id="syBadge">시트 미연결</span>
     </div>
   </header>
   <div class="app">
@@ -454,6 +455,7 @@ function buildCmp() {
   $("#cmpbox").innerHTML = h + "</table>"; $("#cmpbox").querySelectorAll("td,th").forEach((c) => c.style.padding = "3px 8px");
 }
 function select(id, fromList) {
+  if (syOn() && Date.now() - lastPull > 4000) syPull();
   const prev = selected; selected = id; renderDetail(); renderList(); renderSheet();
   if (prev != null) setIcon(prev);
   setIcon(id);
@@ -520,7 +522,7 @@ let syq = {}; try { syq = JSON.parse(localStorage.getItem(SYQ) || "{}"); } catch
 const syOn = () => !!(sy.url && sy.token);
 const CLSK = { reg: "미등록", hid: "매출 비공개" }, CLSV = { "미등록": "reg", "매출 비공개": "hid" };
 let syTimer = null, syBusy = false;
-function sySt(m) { const e = $("#sySt"); if (e) e.textContent = m; }
+function sySt(m) { const e = $("#sySt"); if (e) e.textContent = m; const h = $("#syBadge"); if (h) { h.textContent = !syOn() ? "시트 미연결" : /실패/.test(m) ? "시트 ⚠ 대기 " + Object.keys(syq).length : Object.keys(syq).length ? "시트 저장중…" : "시트 ✓"; h.style.color = /실패/.test(m) || !syOn() ? "#b42318" : ""; } }
 function syQSave() { try { localStorage.setItem(SYQ, JSON.stringify(syq)); } catch (e) {} }
 const byKey = (k) => DATA.find((d) => skey(d) === k);
 function touch(d) {
@@ -553,10 +555,11 @@ async function syFlush() {
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
     sySt("시트 연결됨 · 저장 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
   } catch (e) { sySt("시트 저장 실패 (대기 " + Object.keys(syq).length + "건) · 연결되면 자동 재시도"); }
-  finally { syBusy = false; }
+  finally { syBusy = false; if (syOn() && Object.keys(syq).length) { clearTimeout(syTimer); syTimer = setTimeout(syFlush, 1500); } }
 }
+let lastPull = 0;
 async function syPull() {
-  if (!syOn()) return;
+  if (!syOn()) return; lastPull = Date.now();
   try {
     const j = await syPost({ action: "list" }); let ch = 0;
     j.rows.forEach((w) => {
@@ -603,8 +606,9 @@ $("#syInv").onclick = async () => {
 })();
 sySt(syOn() ? "시트 연결 설정됨" : "시트 미연결 (이 기기에만 저장)");
 window.addEventListener("online", syAll);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) syAll(); });
-setInterval(() => { if (!document.hidden) syAll(); }, 45000);
+document.addEventListener("visibilitychange", () => { if (document.hidden) { clearTimeout(syTimer); syFlush(); } else syAll(); });
+window.addEventListener("pagehide", () => { syFlush(); });
+setInterval(() => { if (!document.hidden) syAll(); }, 30000);
 if (syOn()) setTimeout(syAll, 800);
 
 refresh(); renderDetail(); buildCmp();
