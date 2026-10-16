@@ -127,6 +127,11 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
   .rows { max-height: none; }
 }
 
+.detail .shb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
+.detail .shb .lab{font-size:12px;color:var(--muted)}
+.detail .shb button{min-width:38px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:15px;cursor:pointer}
+.detail .shb button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.detail .boothin{width:96px;font-size:16px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
 .detail .shc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
 .detail .shc .lab{font-size:12px;color:var(--muted)}
 .detail .shc button{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
@@ -274,7 +279,7 @@ let store = { visited: {}, memo: {}, cls: {} };
 try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
 function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 const skey = (d) => d.j + "|" + d.n;
-store.cls = store.cls || {}; store.ts = store.ts || {};
+store.cls = store.cls || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
 const seen = {};
 DATA.forEach((d) => {
   const k = d.la.toFixed(5) + "," + d.lo.toFixed(5), n = seen[k] = (seen[k] || 0) + 1;
@@ -327,6 +332,8 @@ let me = null, meMarker = null;
 const hav = (a, b, c, d) => { const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t, u = Math.sin(x / 2) ** 2 + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(u)); };
 const fmtDist = (m) => m < 1000 ? Math.round(m / 10) * 10 + "m" : (m / 1000).toFixed(1) + "km";
 function setVis(d, v) { d.vis = v; const k = skey(d); if (v) store.visited[k] = 1; else delete store.visited[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
+let boothOther = null;
+function setBooth(d, v) { const k = skey(d); if (v) store.booth[k] = v; else delete store.booth[k]; save(); touch(d); renderDetail(); }
 function setCls(d, v) { d.cls = v; const k = skey(d); if (v) store.cls[k] = v; else delete store.cls[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
 /* ---------- 사진 (이 기기 브라우저에 저장) ---------- */
 let _db = null, thumbUrls = [];
@@ -367,7 +374,7 @@ function openViewer(d, p, after) {
   bar.append(save1, del, x); v.append(im, bar); v.onclick = (e) => { if (e.target === v) close(); };
 }
 function exportNotes() {
-  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 오픈업분류: store.cls };
+  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 부스수: store.booth, 오픈업분류: store.cls };
   const u = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
   const a = document.createElement("a"); a.href = u; a.download = "임장기록_" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000);
 }
@@ -409,7 +416,7 @@ function renderDetail() {
   const naver = "https://map.naver.com/p/search/" + encodeURIComponent(d.n);
   el.innerHTML = '<h2></h2><div class="badges"></div><dl></dl><div class="links"></div>'
     + '<label class="check"><input type="checkbox" id="vchk"><span>방문했음</span></label>'
-    + '<div class="shc"></div><textarea id="memo" placeholder="현장 메모 (유동, 간판, 공실, 부스 수 등)"></textarea><div class="shp"></div>';
+    + '<div class="shb"></div><textarea id="memo" placeholder="현장 메모 (유동, 간판, 공실 등)"></textarea><div class="shp"></div><div class="shc"></div>';
   el.querySelector("h2").textContent = d.n;
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
@@ -427,6 +434,11 @@ function renderDetail() {
     [["reg", "미등록 (검색 안 됨)"], ["hid", "매출 비공개 (점주 요청)"]].forEach(([v, t]) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; if (d.cls === v) b.className = "on"; b.onclick = () => setCls(d, d.cls === v ? "" : v); cx.appendChild(b); });
   } else cx.remove();
   renderPhotos(d, el.querySelector(".shp"));
+  const bx = el.querySelector(".shb"), bv = store.booth[k] || 0, other = bv > 6 || boothOther === k;
+  const bl = document.createElement("span"); bl.className = "lab"; bl.textContent = "부스 수"; bx.appendChild(bl);
+  for (let n = 1; n <= 6; n++) { const b = document.createElement("button"); b.type = "button"; b.textContent = n; if (bv === n && !other) b.className = "on"; b.onclick = () => { boothOther = null; setBooth(d, bv === n ? 0 : n); }; bx.appendChild(b); }
+  const ob = document.createElement("button"); ob.type = "button"; ob.textContent = "기타"; if (other) ob.className = "on"; ob.onclick = () => { boothOther = other ? null : k; if (other) setBooth(d, 0); else renderDetail(); }; bx.appendChild(ob);
+  if (other) { const i = document.createElement("input"); i.type = "number"; i.inputMode = "numeric"; i.min = 7; i.placeholder = "직접 입력"; i.value = bv > 6 ? bv : ""; i.className = "boothin"; i.onchange = () => { const n = parseInt(i.value, 10); setBooth(d, n > 0 ? n : 0); }; bx.appendChild(i); const u = document.createElement("span"); u.className = "lab"; u.textContent = "개"; bx.appendChild(u); }
   const chk = $("#vchk"); chk.checked = d.vis;
   chk.onchange = () => setVis(d, chk.checked);
   const memo = $("#memo"); memo.value = store.memo[k] || "";
@@ -535,7 +547,7 @@ async function syFlush() {
     for (const k of Object.keys(syq)) {
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
       const ts = store.ts[k] || Date.now();
-      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", memo: store.memo[k] || "", ts });
+      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", memo: store.memo[k] || "", booth: store.booth[k] || "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
     }
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
@@ -554,6 +566,7 @@ async function syPull() {
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
       if (c) store.cls[w.key] = c; else delete store.cls[w.key];
       if (w.memo !== "" && w.memo != null) store.memo[w.key] = String(w.memo); else delete store.memo[w.key];
+      if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; else delete store.booth[w.key]; }
       store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
     if (ch) { save(); refresh(); const a = document.activeElement; if (!(a && a.id === "memo")) renderDetail(); }
@@ -565,7 +578,7 @@ $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy
 $("#sySave").onclick = () => {
   sy = { url: $("#syUrl").value.trim(), token: $("#syTok").value.trim(), who: $("#syWho").value.trim() };
   try { localStorage.setItem(SYK, JSON.stringify(sy)); } catch (e) {}
-  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.memo), ...Object.keys(store.cls)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
+  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.memo), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
   syAll();
 };
 $("#sySync").onclick = syAll;
