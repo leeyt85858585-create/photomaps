@@ -149,9 +149,8 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 #map{width:100%;height:100%}
 .mk{position:relative;width:0;height:0}
 .mk .d{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);box-sizing:border-box}
-.mk.none .d{background:#fff;border-color:#6f7e8a}
+.mk.none .d{background:transparent;border:3px solid #3f4d58;box-shadow:0 0 0 1px rgba(255,255,255,.9)}
 .mk.diff .d{border-color:#c8590f;border-width:3px}
-.mk.old .d{border-style:dashed;border-color:#16212b}
 .mk.ouonly .d{border-radius:3px;transform:rotate(45deg)}
 .mk.sel .d{box-shadow:0 0 0 3px #0d6a8a}
 .mk.vis .d::after{content:"✓";position:absolute;inset:0;font-size:10px;line-height:12px;text-align:center;color:#fff;font-weight:700}
@@ -210,7 +209,8 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
       <div class="mapctl">
         <button id="lgbtn" class="lgbtn" type="button" aria-expanded="false">범례 ▸</button>
         <div class="legend" id="legend" hidden>
-        <div class="title">오픈업 추정매출 상한 (만원, 기준월은 지역별로 다름)</div>
+        <div class="title">권역 면(중앙값, 추정 실매출=상한+400, 만원): 연한 색 &lt;1,000 → 진한 색 5,000↑ · 점선 회색=매출 미확인</div>
+        <div class="title">점: 오픈업 추정매출 상한 (만원, 기준월은 지역별로 다름)</div>
         <div class="row">
           <span class="it"><span class="dot" style="background:#cfe4ec"></span>~500</span>
           <span class="it"><span class="dot" style="background:#95c4d4"></span>~1,500</span>
@@ -222,7 +222,6 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
           <span class="it"><span class="dot none"></span>매출 없음(미확인·미등록·비공개)</span>
           <span class="it"><span class="dot" style="background:#4f9fb9;border-radius:3px;transform:rotate(45deg)"></span>오픈업에만 있음</span>
           <span class="it"><span class="dot warn"></span>같은 주소, 상호 다름</span>
-          <span class="it"><span class="dot" style="background:#4f9fb9;border:2px dashed #16212b"></span>기준월 8월 아님(7·6월 등)</span>
         </div>
         </div>
         <button id="locbtn" class="lgbtn" type="button">내 위치</button>
@@ -236,6 +235,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
         <div class="group"><span class="lab">방문</span><div class="seg" id="fVisit"></div></div>
       </div>
       <div class="panel detail" id="detail"></div>
+      <details class="panel" id="cmp"><summary style="cursor:pointer;font-weight:700">권역별 매출 비교 (오픈업 상한+400만원)</summary><div id="cmpbox" style="overflow-x:auto;margin-top:8px"></div><div style="color:var(--muted);font-size:12px;margin-top:6px">매출 없는 매장은 제외하고 계산. 기준월이 권역마다 달라 참고용입니다.</div></details>
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
@@ -406,7 +406,7 @@ function renderDetail() {
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
   row("지번", d.j); row("도로명", d.r);
-  if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.orr) row("오픈업 주소", d.orr); }
+  if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr) row("오픈업 주소", d.orr); }
   else row("오픈업", noneFull(d));
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", kakao], ["네이버지도에서 검색", naver]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
@@ -422,6 +422,14 @@ function renderDetail() {
   memo.oninput = () => { if (memo.value) store.memo[k] = memo.value; else delete store.memo[k]; save(); const o = $("#shmemo"); if (o) o.value = memo.value; };
 }
 
+function buildCmp() {
+  const g = {}; DATA.forEach((d) => { const a = AREAL[d.z]; const o = g[a] || (g[a] = { n: 0, v: [] }); o.n++; if (d.hi != null) o.v.push(d.hi + 400); });
+  const med = (v) => { const a = [...v].sort((x, y) => x - y), m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  const rows = Object.entries(g).map(([a, o]) => ({ a, n: o.n, k: o.v.length, m: o.v.length ? med(o.v) : null, p: o.v.length ? o.v.reduce((x, y) => x + y, 0) / o.v.length : null, h: o.v.filter((x) => x >= 3000).length })).sort((x, y) => (y.m ?? -1) - (x.m ?? -1));
+  let h = '<table style="border-collapse:collapse;font-size:12px;white-space:nowrap"><tr><th align=left>권역</th><th>매출확인/전체</th><th>중앙값</th><th>평균</th><th>3천↑</th></tr>';
+  rows.forEach((r) => { h += "<tr><td>" + r.a + "</td><td align=center>" + r.k + "/" + r.n + "</td><td align=right>" + (r.m == null ? "—" : Math.round(r.m).toLocaleString()) + "</td><td align=right>" + (r.p == null ? "—" : Math.round(r.p).toLocaleString()) + "</td><td align=center>" + r.h + "</td></tr>"; });
+  $("#cmpbox").innerHTML = h + "</table>"; $("#cmpbox").querySelectorAll("td,th").forEach((c) => c.style.padding = "3px 8px");
+}
 function select(id, fromList) {
   const prev = selected; selected = id; renderDetail(); renderList(); renderSheet();
   if (prev != null) setIcon(prev);
@@ -431,7 +439,7 @@ function select(id, fromList) {
 }
 function iconHtml(d) {
   const t = tier(d.hi), c = ["mk"];
-  if (t < 0) c.push("none"); if (d.s === "diff") c.push("diff"); if (d.vis) c.push("vis"); if (isOld(d)) c.push("old"); if (d.s === "ou") c.push("ouonly"); if (selected === d.id) c.push("sel");
+  if (t < 0) c.push("none"); if (d.s === "diff") c.push("diff"); if (d.vis) c.push("vis"); if (d.s === "ou") c.push("ouonly"); if (selected === d.id) c.push("sel");
   const bg = t < 0 ? "" : ' style="background:' + TC[t] + '"';
   const nm = d.n.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return '<div class="' + c.join(" ") + '"><div class="d"' + bg + '></div><span class="l">' + nm + '</span></div>';
@@ -446,12 +454,15 @@ function hull(pts) {
 }
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT } });
-  AREAS.forEach(([z, label, col]) => {
+  const TIER = [[1000, "#cfe4ec"], [2000, "#95c4d4"], [3000, "#4f9fb9"], [5000, "#1f6f8f"], [1e9, "#0a3d58"]];
+  const medOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+  AREAS.forEach(([z, label, col0]) => {
+    const md = medOf(z), col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
     const h = hull(pts); if (h.length < 3) return;
-    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: 0.1, strokeColor: col, strokeOpacity: 0.6, strokeWeight: 2, clickable: false });
+    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.06 : 0.28, strokeColor: md == null ? col : "#16212b", strokeOpacity: md == null ? 0.7 : 0.55, strokeWeight: md == null ? 2 : 1.5, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
     const top = h.reduce((a, p) => p.y > a.y ? p : a, h[0]);
-    new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:' + col + ';text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + '</div>', anchor: new naver.maps.Point(0, 0) } });
+    new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + (md == null ? " · 매출 미확인" : " · 중앙값 " + Math.round(md).toLocaleString() + "만") + '</div>', anchor: new naver.maps.Point(0, 0) } });
   });
   DATA.forEach((d) => {
     const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.mla, d.mlo), icon: { content: iconHtml(d), anchor: new naver.maps.Point(0, 0) }, zIndex: 10 });
@@ -478,7 +489,7 @@ $("#expbtn").onclick = exportNotes;
 $("#lgbtn").onclick = () => { const lg = $("#legend"); lg.hidden = !lg.hidden; $("#lgbtn").textContent = lg.hidden ? "범례 ▸" : "범례 ▾"; $("#lgbtn").setAttribute("aria-expanded", String(!lg.hidden)); };
 if (window.innerWidth > 920) $("#lgbtn").click();
 window.navermap_authFailure = () => { $("#err").style.display = "grid"; };
-refresh(); renderDetail();
+refresh(); renderDetail(); buildCmp();
 function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid"; } }
 const CID = "lqh247mo03";
 const sc = document.createElement("script");
