@@ -248,7 +248,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
           <input id="syUrl" type="url" placeholder="웹앱 주소 (https://script.google.com/.../exec)" style="font-size:16px;padding:6px 8px">
           <input id="syTok" type="password" placeholder="비밀키" autocomplete="off" style="font-size:16px;padding:6px 8px">
           <input id="syWho" type="text" placeholder="내 이름 (예: 나 / 파트너)" style="font-size:16px;padding:6px 8px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lgbtn" id="sySave">저장·연결</button><button type="button" class="lgbtn" id="sySync">지금 동기화</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lgbtn" id="sySave">저장·연결</button><button type="button" class="lgbtn" id="sySync">지금 동기화</button><button type="button" class="lgbtn" id="syInv">초대 링크 복사</button></div>
           <div id="sySt" style="font-size:12px;color:var(--muted)"></div>
         </div></details>
       <details class="panel" id="cmp"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">권역별 매출 비교 (오픈업 상한+400만원)</summary><div id="cmpbox" style="overflow-x:auto;margin-top:8px"></div><div style="color:var(--muted);font-size:12px;margin-top:6px">매출 없는 매장은 제외하고 계산. 기준월이 권역마다 달라 참고용입니다.</div></details>
@@ -569,6 +569,25 @@ $("#sySave").onclick = () => {
   syAll();
 };
 $("#sySync").onclick = syAll;
+const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
+$("#syInv").onclick = async () => {
+  if (!syOn()) { sySt("먼저 주소·비밀키를 저장·연결하세요"); return; }
+  const link = location.origin + location.pathname + "#sync=" + enc({ u: sy.url, t: sy.token });
+  try { await navigator.clipboard.writeText(link); sySt("초대 링크를 복사했습니다. 파트너에게만 개인 대화로 보내세요."); }
+  catch (e) { $("#syUrl").value = link; sySt("복사가 막혀 주소 칸에 링크를 표시했습니다. 길게 눌러 복사하세요(저장하지 마세요)."); }
+};
+(function () {
+  const m = /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return;
+  try {
+    const o = dec(m[1]); if (o && o.u && o.t) {
+      sy = { url: String(o.u), token: String(o.t), who: sy.who || "파트너" };
+      localStorage.setItem(SYK, JSON.stringify(sy));
+      $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
+    }
+  } catch (e) {}
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+})();
 sySt(syOn() ? "시트 연결 설정됨" : "시트 미연결 (이 기기에만 저장)");
 window.addEventListener("online", syAll);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) syAll(); });
