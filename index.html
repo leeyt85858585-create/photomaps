@@ -68,7 +68,7 @@ svg#map.drag { cursor: grabbing; }
 .zoom { position: absolute; right: 10px; top: 10px; display: grid; gap: 4px; }
 .zoom button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 18px; line-height: 1; }
 .zoom button:hover { border-color: var(--accent); }
-.legend { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; font-size: 12px; }
+.legend { position: static; max-width: 100%; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; font-size: 12px; }
 .legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; color: var(--muted); }
 .legend .it { display: inline-flex; align-items: center; gap: 5px; }
 .legend .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
@@ -142,6 +142,32 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 .zoomed .mk .l,.mk.sel .l{display:inline}
 .zl{font:700 13px var(--font-body);white-space:nowrap;transform:translate(-50%,-100%)}
 .err{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;background:var(--mapbg);color:var(--ink)}
+.mapctl{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:calc(100% - 70px);z-index:5}
+.lgbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.lgbtn:hover{border-color:var(--accent)}
+.sheet{position:absolute;left:10px;right:10px;bottom:22px;z-index:6;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);display:none}
+.sheet .sh1{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.sheet .sh1 b{font-size:15px;overflow-wrap:anywhere}
+.sheet .sh1 button{border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:0 4px}
+.sheet .sh2{color:var(--muted);font-size:13px;margin:2px 0 8px;font-family:var(--font-num);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.sheet .sh3{display:flex;flex-wrap:wrap;gap:6px}
+.sheet .sh3 button,.sheet .sh3 a{border:1px solid var(--line);background:transparent;color:var(--accent);border-radius:8px;padding:5px 10px;font-size:13px;text-decoration:none;cursor:pointer}
+.sheet .sh3 button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.me{width:16px;height:16px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 2px rgba(37,99,235,.4);transform:translate(-8px,-8px)}
+[hidden]{display:none!important}
+.sheet{max-height:62%;overflow-y:auto}
+.sheet .shc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+.sheet .shc .lab{font-size:12px;color:var(--muted)}
+.sheet .shc button{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+.sheet .shc button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.sheet textarea{width:100%;min-height:54px;font-size:16px;margin-bottom:8px;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--ink)}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.thumbs .th{width:52px;height:52px;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);cursor:pointer}
+.thumbs .th img{width:100%;height:100%;object-fit:cover;display:block}
+.viewer{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+.viewer img{max-width:100%;max-height:78vh;object-fit:contain;border-radius:6px}
+.viewer .vbar{display:flex;gap:10px}
+.viewer .vbar a,.viewer .vbar button{border:1px solid #fff;background:transparent;color:#fff;border-radius:8px;padding:8px 16px;font-size:14px;text-decoration:none;cursor:pointer}
 </style></head><body>
 <div class="wrap">
   <header>
@@ -163,7 +189,9 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
     <div class="mapcard">
       <div id="map"></div>
       <div class="err" id="err"><div><b>네이버 지도를 불러오지 못했습니다.</b><br>Client ID, 등록한 서비스 URL(접속 주소와 일치해야 함), 인터넷 연결을 확인하세요.<br>목록과 상세는 그대로 쓸 수 있습니다.</div></div>
-      <div class="legend">
+      <div class="mapctl">
+        <button id="lgbtn" class="lgbtn" type="button" aria-expanded="false">범례 ▸</button>
+        <div class="legend" id="legend" hidden>
         <div class="title">오픈업 추정매출 상한 (만원, 기준월은 지역별로 다름)</div>
         <div class="row">
           <span class="it"><span class="dot" style="background:#cfe4ec"></span>~500</span>
@@ -173,12 +201,16 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
           <span class="it"><span class="dot" style="background:#0a3d58"></span>5,000 초과</span>
         </div>
         <div class="row">
-          <span class="it"><span class="dot none"></span>오픈업 보관함 없음</span>
+          <span class="it"><span class="dot none"></span>매출 없음(미확인·미등록·비공개)</span>
           <span class="it"><span class="dot" style="background:#4f9fb9;border-radius:3px;transform:rotate(45deg)"></span>오픈업에만 있음</span>
           <span class="it"><span class="dot warn"></span>같은 주소, 상호 다름</span>
           <span class="it"><span class="dot" style="background:#4f9fb9;border:2px dashed #16212b"></span>기준월 8월 아님(7·6월 등)</span>
         </div>
+        </div>
+        <button id="locbtn" class="lgbtn" type="button">내 위치</button>
       </div>
+      <div class="sheet" id="sheet"></div>
+      <div class="viewer" id="viewer" hidden></div>
     </div>
     <div class="side">
       <div class="panel filters">
@@ -189,10 +221,11 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
       <div class="panel detail" id="detail"></div>
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
-          <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option></select></span></div>
+          <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
         <div class="rows" id="rows"></div>
       </div>
-      <div class="foot"><span>오픈업 매출은 추정 구간이며 기준월이 지역마다 다릅니다(홍대·북촌·혜화·익선·을지로 8월, 이태원·용산 7월, 성수 6월 등).</span><span>방문 체크와 메모는 이 기기의 브라우저에만 저장됩니다.</span></div>
+      <div class="foot"><span>오픈업 매출은 추정 구간이며 기준월이 지역마다 다릅니다(홍대·북촌·혜화·익선·을지로 8월, 이태원·용산 7월, 성수 6월 등).</span><span>방문 체크·메모·사진은 이 기기의 브라우저에만 저장됩니다(브라우저 데이터를 지우면 사라짐). 사진은 사진 화면의 "저장"으로 꺼낼 수 있습니다.</span>
+        <button type="button" class="lgbtn" id="expbtn" style="justify-self:start">메모·방문 기록 내보내기</button></div>
     </div>
   </div>
 </div>
@@ -201,29 +234,32 @@ const DATA = [{"z":"1","n":"포토이즘컬러드 연남점","j":"마포구 동�
 const AREAS = [["1","홍대 1 연남·연희","#7557a8"],["2","홍대 2 홍대입구역","#a97a16"],["3","홍대 3 상수·합정","#2f7d4f"],["?","홍대 기타","#6f7e8a"],
 ["신촌·이대","신촌·이대","#c2410c"],["이태원","이태원","#be185d"],["해방촌","해방촌","#9d174d"],["신용산","신용산·용리단길","#0f766e"],["남영·숙대","남영·숙대","#4d7c0f"],["성수","성수","#b45309"],["건대","건대","#0369a1"],["한남","한남","#7c2d12"],["기타","기타 (강남)","#6f7e8a"],["을지로","을지로","#1d4ed8"],["북촌·안국","북촌·안국","#6d28d9"],["인사동·종로","인사동·종로","#475569"],["서촌","서촌","#0e7490"],["익선·서순라길","익선·서순라길","#a21caf"],["혜화","혜화·대학로","#15803d"]];
 const AREAL = {}, AREAC = {}, AREAO = {}; AREAS.forEach((a, i) => { AREAL[a[0]] = a[1]; AREAC[a[0]] = a[2]; AREAO[a[0]] = i; });
-const ST = { ok: "상호·주소 일치", sim: "주소 일치·상호 유사", diff: "같은 주소, 상호 다름", none: "오픈업 보관함 없음", ou: "오픈업에만 있음(네이버 저장 없음)" };
+const ST = { ok: "상호·주소 일치", sim: "주소 일치·상호 유사", diff: "같은 주소, 상호 다름", none: "오픈업 미확인", ou: "오픈업에만 있음(네이버 저장 없음)" };
 const $ = (s) => document.querySelector(s);
 const fmt = (n) => n.toLocaleString("ko-KR");
 const TC = ["#cfe4ec","#95c4d4","#4f9fb9","#1f6f8f","#0a3d58"];
 const SKEY = "hongdae-imjang-v1";
+const noneLabel = (d) => d.cls === "reg" ? "미등록" : d.cls === "hid" ? "매출 비공개" : "오픈업 미확인";
+const noneFull = (d) => d.cls === "reg" ? "오픈업 미등록 (검색 안 됨)" : d.cls === "hid" ? "매출 비공개 (점주 요청)" : "오픈업 미확인 (미등록·비공개 구분 전)";
 const isOld = (d) => d.mo && d.mo !== "8월";
-let store = { visited: {}, memo: {} };
+let store = { visited: {}, memo: {}, cls: {} };
 try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
 function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 const skey = (d) => d.j + "|" + d.n;
+store.cls = store.cls || {};
 const seen = {};
 DATA.forEach((d) => {
   const k = d.la.toFixed(5) + "," + d.lo.toFixed(5), n = seen[k] = (seen[k] || 0) + 1;
   d.mla = d.la; d.mlo = d.lo;
   if (n > 1) { const a = (n - 1) * 2.1; d.mla += Math.sin(a) * 0.00006; d.mlo += Math.cos(a) * 0.00007; }
-  d.vis = !!store.visited[skey(d)];
+  d.vis = !!store.visited[skey(d)]; d.cls = (store.cls || {})[skey(d)] || "";
 });
 const tier = (h) => h == null ? -1 : h <= 500 ? 0 : h <= 1500 ? 1 : h <= 3000 ? 2 : h <= 5000 ? 3 : 4;
 let selected = null, map = null, markers = [];
 /* ---------- 필터·목록·상세 ---------- */
 const F = { zone: "all", ou: "all", visit: "all" };
 const OPTS = {
-  fOu: [["all", "전체"], ["has", "매출 확인"], ["none", "보관함 없음"], ["diff", "확인 필요"], ["ou", "오픈업에만"]],
+  fOu: [["all", "전체"], ["has", "매출 확인"], ["none", "매출 없음(전체)"], ["unk", "미확인"], ["reg", "미등록"], ["hid", "비공개"], ["diff", "확인 필요"], ["ou", "오픈업에만"]],
   fVisit: [["all", "전체"], ["no", "아직"], ["yes", "방문함"]]
 };
 const KEYS = { fOu: "ou", fVisit: "visit" };
@@ -250,14 +286,98 @@ function buildSeg(id) {
     b.onclick = () => { F[KEYS[id]] = v; refresh(); }; el.appendChild(b);
   });
 }
+function passOu(d) {
+  const o = F.ou, n = d.s === "none";
+  return o === "all" || (o === "has" && d.hi != null) || (o === "none" && n) || (o === "unk" && n && !d.cls) || (o === "reg" && n && d.cls === "reg") || (o === "hid" && n && d.cls === "hid") || (o === "diff" && d.s === "diff") || (o === "ou" && d.s === "ou");
+}
 const pass = (d) => (F.zone === "all" || d.z === F.zone)
-  && (F.ou === "all" || (F.ou === "has" && d.hi != null) || (F.ou === "none" && d.s === "none") || (F.ou === "diff" && d.s === "diff") || (F.ou === "ou" && d.s === "ou"))
+  && passOu(d)
   && (F.visit === "all" || (F.visit === "yes") === d.vis);
 const revText = (d) => d.hi == null ? "—" : d.rev.replace(/(\d+)/g, (m) => fmt(+m)).replace(/≤/g, "~").replace("~", " ~ ").trim();
 
+let me = null, meMarker = null;
+const hav = (a, b, c, d) => { const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t, u = Math.sin(x / 2) ** 2 + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(u)); };
+const fmtDist = (m) => m < 1000 ? Math.round(m / 10) * 10 + "m" : (m / 1000).toFixed(1) + "km";
+function setVis(d, v) { d.vis = v; const k = skey(d); if (v) store.visited[k] = 1; else delete store.visited[k]; save(); refresh(); renderDetail(); renderSheet(); }
+function setCls(d, v) { d.cls = v; const k = skey(d); if (v) store.cls[k] = v; else delete store.cls[k]; save(); refresh(); renderDetail(); renderSheet(); }
+/* ---------- 사진 (이 기기 브라우저에 저장) ---------- */
+let _db = null, thumbUrls = [];
+function idb() { return new Promise((res, rej) => { if (_db) return res(_db); try { const r = indexedDB.open("imjang-photos", 1); r.onupgradeneeded = () => { const st = r.result.createObjectStore("p", { keyPath: "id", autoIncrement: true }); st.createIndex("k", "k"); }; r.onsuccess = () => { _db = r.result; res(_db); }; r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); }
+const idbReq = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function photosOf(k) { const db = await idb(); return idbReq(db.transaction("p").objectStore("p").index("k").getAll(k)); }
+async function addPhoto(k, blob) { const db = await idb(); return idbReq(db.transaction("p", "readwrite").objectStore("p").add({ k, t: Date.now(), blob })); }
+async function delPhoto(id) { const db = await idb(); return idbReq(db.transaction("p", "readwrite").objectStore("p").delete(id)); }
+async function shrink(file, max) {
+  try { const bmp = await createImageBitmap(file); const sc = Math.min(1, max / Math.max(bmp.width, bmp.height)); const c = document.createElement("canvas"); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height); return await new Promise((r) => c.toBlob((b) => r(b || file), "image/jpeg", 0.82)); } catch (e) { return file; }
+}
+function revokeThumbs() { thumbUrls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) {} }); thumbUrls = []; }
+async function renderPhotos(d, box) {
+  box.innerHTML = ""; revokeThumbs();
+  const k = skey(d), row = document.createElement("div"); row.className = "thumbs"; box.appendChild(row);
+  const mkIn = (cap) => { const i = document.createElement("input"); i.type = "file"; i.accept = "image/*"; if (cap) i.setAttribute("capture", "environment"); else i.multiple = true; i.hidden = true; i.onchange = async () => { const fs = [...i.files]; i.value = ""; for (const f of fs) { try { await addPhoto(k, await shrink(f, 1600)); } catch (e) { box.insertAdjacentHTML("beforeend", '<div class="empty">사진을 저장하지 못했습니다(저장 공간·브라우저 설정 확인)</div>'); } } if (selected != null && skey(DATA[selected]) === k) renderPhotos(d, box); }; return i; };
+  const bar = document.createElement("div"); bar.className = "sh3";
+  const cam = mkIn(true), alb = mkIn(false);
+  const b1 = document.createElement("button"); b1.type = "button"; b1.textContent = "📷 촬영"; b1.onclick = () => cam.click();
+  const b2 = document.createElement("button"); b2.type = "button"; b2.textContent = "🖼 앨범"; b2.onclick = () => alb.click();
+  bar.append(b1, b2, cam, alb); box.appendChild(bar);
+  try {
+    const list = (await photosOf(k)).sort((a, b) => a.t - b.t);
+    if (selected == null || skey(DATA[selected]) !== k) return;
+    list.forEach((p) => { const u = URL.createObjectURL(p.blob); thumbUrls.push(u); const t = document.createElement("button"); t.type = "button"; t.className = "th"; t.setAttribute("aria-label", "사진 보기"); const im = document.createElement("img"); im.src = u; im.alt = ""; t.appendChild(im); t.onclick = () => openViewer(d, p, () => renderPhotos(d, box)); row.appendChild(t); });
+    if (list.length) b1.textContent = "📷 촬영 (" + list.length + ")";
+  } catch (e) { row.insertAdjacentHTML("beforeend", '<div class="empty">이 브라우저에서는 사진 저장을 쓸 수 없습니다</div>'); }
+}
+function openViewer(d, p, after) {
+  const v = $("#viewer"); v.innerHTML = ""; v.hidden = false;
+  const u = URL.createObjectURL(p.blob), im = document.createElement("img"); im.src = u; im.alt = d.n + " 현장 사진";
+  const bar = document.createElement("div"); bar.className = "vbar";
+  const close = () => { v.hidden = true; v.innerHTML = ""; try { URL.revokeObjectURL(u); } catch (e) {} };
+  const save1 = document.createElement("a"); save1.textContent = "저장"; save1.href = u; save1.download = d.n.replace(/[^\w가-힣]+/g, "_") + "_" + new Date(p.t).toISOString().slice(0, 10) + ".jpg";
+  const del = document.createElement("button"); del.type = "button"; del.textContent = "삭제"; let armed = false;
+  del.onclick = async () => { if (!armed) { armed = true; del.textContent = "한 번 더 누르면 삭제"; return; } try { await delPhoto(p.id); } catch (e) {} close(); after(); };
+  const x = document.createElement("button"); x.type = "button"; x.textContent = "닫기"; x.onclick = close;
+  bar.append(save1, del, x); v.append(im, bar); v.onclick = (e) => { if (e.target === v) close(); };
+}
+function exportNotes() {
+  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 오픈업분류: store.cls };
+  const u = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = u; a.download = "임장기록_" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000);
+}
+function locate() {
+  const b = $("#locbtn"); b.textContent = "위치 확인 중…";
+  try {
+    navigator.geolocation.getCurrentPosition((p) => {
+      me = { la: p.coords.latitude, lo: p.coords.longitude };
+      DATA.forEach((d) => { d.dist = hav(me.la, me.lo, d.la, d.lo); });
+      if (map) { const pos = new naver.maps.LatLng(me.la, me.lo); if (meMarker) meMarker.setPosition(pos); else meMarker = new naver.maps.Marker({ map, position: pos, clickable: false, zIndex: 5, icon: { content: '<div class="me"></div>', anchor: new naver.maps.Point(0, 0) } }); map.panTo(pos); }
+      b.textContent = "내 위치 ✓"; renderList(); renderSheet();
+    }, () => { b.textContent = "위치 사용 불가(권한 확인)"; if ($("#sort").value === "near") { $("#sort").value = "zone"; renderList(); } }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+  } catch (e) { b.textContent = "위치 사용 불가"; }
+}
+function renderSheet() {
+  const el = $("#sheet");
+  if (selected == null) { el.style.display = "none"; revokeThumbs(); return; }
+  const d = DATA[selected], k = skey(d); el.style.display = "block";
+  el.innerHTML = '<div class="sh1"><b></b><button type="button" id="shx" aria-label="닫기">×</button></div><div class="sh2"></div><div class="sh3 a"></div><div class="shc"></div><textarea id="shmemo" rows="2" placeholder="특이사항 메모 (유동, 간판, 공실, 부스 수 등)"></textarea><div class="shp"></div>';
+  el.querySelector("b").textContent = d.n;
+  el.querySelector(".sh2").textContent = AREAL[d.z] + " · " + (d.hi == null ? noneFull(d) : (d.mo ? d.mo + " " : "") + revText(d) + " 만원") + (d.dist != null ? " · " + fmtDist(d.dist) : "");
+  const bx = el.querySelector(".sh3.a");
+  const vb = document.createElement("button"); vb.type = "button"; vb.textContent = d.vis ? "방문함 ✓" : "방문 체크"; if (d.vis) vb.className = "on"; vb.onclick = () => setVis(d, !d.vis); bx.appendChild(vb);
+  [["카카오맵", "https://map.kakao.com/link/map/" + encodeURIComponent(d.n) + "," + d.la + "," + d.lo], ["네이버 검색", "https://map.naver.com/p/search/" + encodeURIComponent(d.n)]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; bx.appendChild(a); });
+  const cx = el.querySelector(".shc");
+  if (d.s === "none") {
+    const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = "오픈업 상태"; cx.appendChild(lab);
+    [["reg", "미등록 (검색 안 됨)"], ["hid", "매출 비공개 (점주 요청)"]].forEach(([v, t]) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; if (d.cls === v) b.className = "on"; b.onclick = () => setCls(d, d.cls === v ? "" : v); cx.appendChild(b); });
+  } else cx.remove();
+  const m = $("#shmemo"); m.value = store.memo[k] || "";
+  m.oninput = () => { if (m.value) store.memo[k] = m.value; else delete store.memo[k]; save(); const o = $("#memo"); if (o) o.value = m.value; };
+  $("#shx").onclick = () => { const p = selected; selected = null; renderDetail(); renderList(); renderSheet(); setIcon(p); };
+  renderPhotos(d, el.querySelector(".shp"));
+}
 function renderList() {
   const rows = DATA.filter(pass);
   if ($("#sort").value === "rev") rows.sort((a, b) => (b.hi ?? -1) - (a.hi ?? -1) || a.id - b.id);
+  else if ($("#sort").value === "near" && me) rows.sort((a, b) => a.dist - b.dist);
   else rows.sort((a, b) => (AREAO[a.z] ?? 99) - (AREAO[b.z] ?? 99) || a.id - b.id);
   $("#lCount").textContent = rows.length;
   const box = $("#rows"); box.innerHTML = "";
@@ -266,8 +386,8 @@ function renderList() {
     if (selected === d.id) b.setAttribute("aria-current", "true");
     b.innerHTML = '<span class="zdot" style="background:' + AREAC[d.z] + '"></span><span><div class="nm"></div><div class="rd"></div></span><span class="rv"></span>';
     b.querySelector(".nm").textContent = d.n + (d.vis ? "  ✓" : "");
-    b.querySelector(".rd").textContent = AREAL[d.z] + " · " + d.r;
-    const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? "보관함 없음" : (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na");
+    b.querySelector(".rd").textContent = AREAL[d.z] + " · " + d.r + (d.dist != null ? " · " + fmtDist(d.dist) : "");
+    const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na");
     b.onclick = () => select(d.id, true); box.appendChild(b);
   });
   if (!rows.length) box.innerHTML = '<div class="empty" style="padding:12px">조건에 맞는 매장이 없습니다.</div>';
@@ -284,24 +404,25 @@ function renderDetail() {
   el.querySelector("h2").textContent = d.n;
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
-  add(AREAL[d.z]); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
+  add(AREAL[d.z]); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(d.s === "none" ? noneFull(d) : ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
   row("지번", d.j); row("도로명", d.r);
   if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.orr) row("오픈업 주소", d.orr); }
-  else row("오픈업", "보관함에 없음");
+  else row("오픈업", noneFull(d));
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", kakao], ["네이버지도에서 검색", naver]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
   const chk = $("#vchk"); chk.checked = d.vis;
-  chk.onchange = () => { d.vis = chk.checked; if (d.vis) store.visited[k] = 1; else delete store.visited[k]; save(); refresh(); };
+  chk.onchange = () => setVis(d, chk.checked);
   const memo = $("#memo"); memo.value = store.memo[k] || "";
-  memo.oninput = () => { if (memo.value) store.memo[k] = memo.value; else delete store.memo[k]; save(); };
+  memo.oninput = () => { if (memo.value) store.memo[k] = memo.value; else delete store.memo[k]; save(); const o = $("#shmemo"); if (o) o.value = memo.value; };
 }
 
 function select(id, fromList) {
-  const prev = selected; selected = id; renderDetail(); renderList();
+  const prev = selected; selected = id; renderDetail(); renderList(); renderSheet();
   if (prev != null) setIcon(prev);
   setIcon(id);
+  if (fromList && window.innerWidth <= 920) { try { document.querySelector(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
   if (map && fromList) { const d = DATA[id]; map.setZoom(Math.max(map.getZoom(), 17)); map.panTo(new naver.maps.LatLng(d.mla, d.mlo)); }
 }
 function iconHtml(d) {
@@ -347,7 +468,11 @@ function refresh() {
   $("#cVisit").textContent = DATA.filter(d => d.vis).length;
   renderList(); applyFilter(); if (selected != null) setIcon(selected);
 }
-$("#sort").onchange = renderList;
+$("#sort").onchange = () => { if ($("#sort").value === "near" && !me) locate(); renderList(); };
+$("#locbtn").onclick = locate;
+$("#expbtn").onclick = exportNotes;
+$("#lgbtn").onclick = () => { const lg = $("#legend"); lg.hidden = !lg.hidden; $("#lgbtn").textContent = lg.hidden ? "범례 ▸" : "범례 ▾"; $("#lgbtn").setAttribute("aria-expanded", String(!lg.hidden)); };
+if (window.innerWidth > 920) $("#lgbtn").click();
 window.navermap_authFailure = () => { $("#err").style.display = "grid"; };
 refresh(); renderDetail();
 function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid"; } }
