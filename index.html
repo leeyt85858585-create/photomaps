@@ -142,7 +142,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
   .app{display:flex;flex-direction:column;align-items:stretch;gap:12px}
   .side{display:contents}
   .mapcard{order:0;height:46vh;min-height:300px}
-  .side .detail{order:1}.side .filters{order:2}.side .list{order:3}.side .foot{order:4}
+  .side .detail{order:1}.side .filters{order:2}.side .list{order:3}.side #cmp{order:4}.side .foot{order:5}
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -211,11 +211,11 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
         <div class="legend" id="legend" hidden>
         <div class="title">권역 면 색 = 추정 실매출 중앙값 (상한+400, 만원)</div>
         <div class="row">
-          <span class="it"><span class="dot" style="background:#ffe08a;border-radius:3px"></span>~1,000</span>
-          <span class="it"><span class="dot" style="background:#ffb347;border-radius:3px"></span>~2,000</span>
-          <span class="it"><span class="dot" style="background:#f2762e;border-radius:3px"></span>~3,000</span>
-          <span class="it"><span class="dot" style="background:#d13b1f;border-radius:3px"></span>~5,000</span>
-          <span class="it"><span class="dot" style="background:#8a1a14;border-radius:3px"></span>5,000 이상</span>
+          <span class="it"><span class="dot" style="background:#f6e3a8;border-radius:3px"></span>~1,000</span>
+          <span class="it"><span class="dot" style="background:#f2c58e;border-radius:3px"></span>~2,000</span>
+          <span class="it"><span class="dot" style="background:#e9a07c;border-radius:3px"></span>~3,000</span>
+          <span class="it"><span class="dot" style="background:#d97b66;border-radius:3px"></span>~5,000</span>
+          <span class="it"><span class="dot" style="background:#b5524a;border-radius:3px"></span>5,000 이상</span>
           <span class="it"><span class="dot" style="background:transparent;border:2px dashed #6f7e8a;border-radius:3px"></span>매출 미확인</span>
         </div>
         <div class="title">점: 오픈업 추정매출 상한 (만원, 기준월은 지역별로 다름)</div>
@@ -243,12 +243,12 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
         <div class="group"><span class="lab">방문</span><div class="seg" id="fVisit"></div></div>
       </div>
       <div class="panel detail" id="detail"></div>
-      <details class="panel" id="cmp"><summary style="cursor:pointer;font-weight:700">권역별 매출 비교 (오픈업 상한+400만원)</summary><div id="cmpbox" style="overflow-x:auto;margin-top:8px"></div><div style="color:var(--muted);font-size:12px;margin-top:6px">매출 없는 매장은 제외하고 계산. 기준월이 권역마다 달라 참고용입니다.</div></details>
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
         <div class="rows" id="rows"></div>
       </div>
+      <details class="panel" id="cmp"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">권역별 매출 비교 (오픈업 상한+400만원)</summary><div id="cmpbox" style="overflow-x:auto;margin-top:8px"></div><div style="color:var(--muted);font-size:12px;margin-top:6px">매출 없는 매장은 제외하고 계산. 기준월이 권역마다 달라 참고용입니다.</div></details>
       <div class="foot"><span>오픈업 매출은 추정 구간이며 기준월이 지역마다 다릅니다(홍대·북촌·혜화·익선·을지로 8월, 이태원·용산 7월, 성수 6월 등).</span><span>방문 체크·메모·사진은 이 기기의 브라우저에만 저장됩니다(브라우저 데이터를 지우면 사라짐). 사진은 사진 화면의 "저장"으로 꺼낼 수 있습니다.</span>
         <button type="button" class="lgbtn" id="expbtn" style="justify-self:start">메모·방문 기록 내보내기</button></div>
     </div>
@@ -462,13 +462,13 @@ function hull(pts) {
 }
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT } });
-  const TIER = [[1000, "#ffe08a"], [2000, "#ffb347"], [3000, "#f2762e"], [5000, "#d13b1f"], [1e9, "#8a1a14"]];
+  const TIER = [[1000, "#f6e3a8"], [2000, "#f2c58e"], [3000, "#e9a07c"], [5000, "#d97b66"], [1e9, "#b5524a"]];
   const medOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
   AREAS.forEach(([z, label, col0]) => {
     const md = medOf(z), col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
     const h = hull(pts); if (h.length < 3) return;
-    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.05 : 0.18, strokeColor: col, strokeOpacity: 0.95, strokeWeight: 3, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
+    new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.04 : 0.12, strokeColor: col, strokeOpacity: 0.8, strokeWeight: 2.5, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
     const top = h.reduce((a, p) => p.y > a.y ? p : a, h[0]);
     new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + (md == null ? " · 매출 미확인" : " · 중앙값 " + Math.round(md).toLocaleString() + "만") + '</div>', anchor: new naver.maps.Point(0, 0) } });
   });
