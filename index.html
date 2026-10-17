@@ -195,8 +195,14 @@ body.fsb{overflow:hidden}
 #zpanel .zrow .zb{display:flex;gap:6px;flex-wrap:wrap}
 #zhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left;color:inherit}
 .zsel{background:var(--accent);color:#fff}
-#fsbtn{position:absolute;right:50px;top:10px;z-index:6}
-.mapctl{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:calc(100% - 150px);z-index:5}
+#fsbtn{position:absolute;right:10px;top:10px;z-index:6}
+#locbtn{position:absolute;left:10px;bottom:34px;z-index:6}
+.addp{padding:8px 10px;gap:6px}
+.addp .btns{flex-wrap:nowrap;align-items:center}
+.addp .btns input{flex:1;min-width:0}
+.addp .btns .msg{font-size:11px;min-width:0}
+#addPos{font-size:12px !important;line-height:1.35}
+.mapctl{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:calc(100% - 110px);z-index:5}
 .lgbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .lgbtn:hover{border-color:var(--accent)}
 .sheet{position:absolute;left:10px;right:10px;bottom:22px;z-index:6;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);display:none}
@@ -225,7 +231,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-v</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-w</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -240,6 +246,7 @@ body.fsb{overflow:hidden}
       <div id="map"></div>
       <div class="err" id="err"><div><b>네이버 지도를 불러오지 못했습니다.</b><br>Client ID, 등록한 서비스 URL(접속 주소와 일치해야 함), 인터넷 연결을 확인하세요.<br>목록과 상세는 그대로 쓸 수 있습니다.</div></div>
       <button id="fsbtn" class="lgbtn" type="button">전체화면</button>
+      <button id="locbtn" class="lgbtn" type="button">내 위치</button>
       <div class="mapctl">
         <button id="lgbtn" class="lgbtn" type="button" aria-expanded="false">범례 ▸</button>
         <div class="legend" id="legend" hidden>
@@ -266,25 +273,19 @@ body.fsb{overflow:hidden}
           <span class="it"><span class="dot warn"></span>같은 주소, 상호 다름</span>
         </div>
         </div>
-        <button id="locbtn" class="lgbtn" type="button">내 위치</button>
         <button id="addbtn" class="lgbtn" type="button">＋ 매장 추가</button>
-        <button id="zbtn" class="lgbtn" type="button">＋ 구역 그리기</button>
+        <button id="zbtn" class="lgbtn" type="button">＋ 범위 매출</button>
       </div>
             <div class="addp" id="addp" hidden>
-        <b>현장에서 매장 추가</b>
-        <input id="addN" type="text" placeholder="매장명 (예: 포토OO 연남점)">
-        <div id="addPos" style="font-size:13px;color:var(--muted)">지도에서 건물을 탭해 위치를 찍으세요 (핀은 끌어서 옮길 수 있음)</div>
-        <div class="btns"><button type="button" class="lgbtn" id="addGps">내 위치로</button></div>
-        <div id="addMsg" class="msg"></div>
-        <div class="btns"><button type="button" class="lgbtn" id="addOk">추가</button><button type="button" class="lgbtn" id="addCancel">취소</button></div>
+        <div class="btns"><input id="addN" type="text" placeholder="매장명 (예: 포토OO 연남점)"><button type="button" class="lgbtn" id="addGps">내 위치로</button></div>
+        <div id="addPos" style="color:var(--muted)">지도에서 건물을 탭해 위치 지정 (핀은 끌어서 이동)</div>
+        <div class="btns"><button type="button" class="lgbtn" id="addOk">추가</button><button type="button" class="lgbtn" id="addCancel">취소</button><div id="addMsg" class="msg"></div></div>
       </div>
       <div class="addp" id="zbar" hidden>
-        <b>내 구역 그리기</b>
-        <div class="btns"><button type="button" class="lgbtn" id="zC">원</button><button type="button" class="lgbtn" id="zP">다각형</button></div>
-        <div id="zHint" style="font-size:13px;color:var(--muted)"></div>
-        <input id="zN" type="text" placeholder="구역 이름 (예: 연남 안쪽 골목)">
+        <div class="btns"><button type="button" class="lgbtn" id="zC">원</button><button type="button" class="lgbtn" id="zP">다각형</button><button type="button" class="lgbtn" id="zUndo">되돌리기</button><button type="button" class="lgbtn" id="zCancel">취소</button></div>
+        <div id="zHint" style="font-size:12px;color:var(--muted);line-height:1.35"></div>
+        <div class="btns"><input id="zN" type="text" placeholder="범위 이름 (예: 연남 안쪽 골목)"><button type="button" class="lgbtn" id="zOk">저장</button></div>
         <div id="zMsg" class="msg"></div>
-        <div class="btns"><button type="button" class="lgbtn" id="zUndo">되돌리기</button><button type="button" class="lgbtn" id="zOk">저장</button><button type="button" class="lgbtn" id="zCancel">취소</button></div>
       </div>
       <div id="fssheet"><div class="fshead"><span id="fsname"></span><button type="button" class="lgbtn" id="fsx">닫기 ✕</button></div></div>
       <div class="viewer" id="viewer" hidden></div>
@@ -297,7 +298,7 @@ body.fsb{overflow:hidden}
       </div>
       <div class="panel detail" id="detail"></div>
       <div class="panel" id="lpanel" hidden><button type="button" id="lhead" aria-expanded="false"><span>부동산 매물 <span id="lcount"></span> <span class="sm">(확인된 매물)</span></span><span id="larr">▸</span></button><div id="lrows" hidden></div></div>
-      <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>내 구역 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(직접 그린 상권 범위)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
+      <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>범위별 매출 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(그린 범위 안 매장 매출)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
@@ -606,8 +607,7 @@ function hull(pts) {
   lo.pop(); up.pop(); return lo.concat(up);
 }
 function initMap() {
-  map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT } });
-  try { const zc = map.controls[naver.maps.Position.TOP_RIGHT].getAt(0); if (zc) { zc.style.transform = "scale(.8)"; zc.style.transformOrigin = "top right"; } } catch (e) {}
+  map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: false });
   const TIER = [[1000, "#f6e3a8"], [2000, "#f2c58e"], [3000, "#e9a07c"], [5000, "#d97b66"], [1e9, "#b5524a"]];
   const statOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return { avg: v.reduce((a, b) => a + b, 0) / v.length, med: v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2 }; };
   AREAS.forEach(([z, label, col0]) => {
@@ -716,7 +716,7 @@ function setPick(la, lo) {
 }
 function endPick() { pickPos = null; $("#addp").hidden = true; try { if (pickMk) pickMk.setMap(null); } catch (e) {} }
 $("#addbtn").onclick = () => {
-  pickPos = null; $("#addp").hidden = false; $("#addN").value = ""; $("#addMsg").textContent = ""; $("#addPos").textContent = "지도에서 건물을 탭해 위치를 찍으세요 (핀은 끌어서 옮길 수 있음)";
+  pickPos = null; $("#addp").hidden = false; $("#addN").value = ""; $("#addMsg").textContent = ""; $("#addPos").textContent = "지도에서 건물을 탭해 위치 지정 (핀은 끌어서 이동)";
   try { if (pickMk) pickMk.setMap(null); } catch (e) {}
   if (!pickBound && map && typeof naver !== "undefined") { pickBound = true; naver.maps.Event.addListener(map, "click", (e) => { if (!$("#addp").hidden) setPick(e.coord.lat(), e.coord.lng()); }); }
 };
@@ -885,7 +885,7 @@ async function loadListings(force) {
 }
 
 
-// ===== 내 구역 (직접 그린 범위의 매출 집계) =====
+// ===== 범위별 매출 (직접 그린 범위의 매출 집계) =====
 store.zones = store.zones || [];
 let zOv = {}, zDraft = null, zShape = "c", zMk = [];
 const ZCOL = ["#e11d48", "#2563eb", "#059669", "#d97706", "#7c3aed", "#0891b2"];
@@ -915,7 +915,7 @@ $("#zhead").onclick = () => zOpen($("#zrows").hidden);
 function paintZones() {
   Object.values(zOv).forEach((o) => { try { o.s.setMap(null); o.l.setMap(null); } catch (e) {} }); zOv = {};
   const box = $("#zrows"); box.innerHTML = ""; $("#zcount").textContent = store.zones.length ? "(" + store.zones.length + ")" : "";
-  if (!store.zones.length) { const e = document.createElement("div"); e.className = "sm"; e.style.cssText = "padding:6px 0;font-size:12px;color:var(--muted)"; e.textContent = "지도 왼쪽 위 ‘＋ 구역 그리기’로 원이나 다각형을 그리면, 안에 든 매장의 매출을 따로 집계합니다."; box.appendChild(e); }
+  if (!store.zones.length) { const e = document.createElement("div"); e.className = "sm"; e.style.cssText = "padding:6px 0;font-size:12px;color:var(--muted)"; e.textContent = "지도 왼쪽 위 ‘＋ 범위 매출’로 원이나 다각형을 그리면, 그 안에 든 매장의 매출을 따로 집계합니다."; box.appendChild(e); }
   store.zones.forEach((z, i) => {
     const col = ZCOL[i % ZCOL.length], st = zStats(z);
     const lab = z.n + " · " + (st.avg == null ? "매출 미확인" : "평균 " + fm(st.avg) + " (중앙값 " + fm(st.med) + ")") + " · " + st.m.length + "곳";
@@ -967,7 +967,7 @@ $("#zUndo").onclick = () => { if (!zDraft) return; if (zShape === "c") { if (zDr
 $("#zCancel").onclick = zEnd;
 $("#zOk").onclick = () => {
   const d = zDraft; if (!d) return;
-  const n = $("#zN").value.trim() || ("구역 " + (store.zones.length + 1));
+  const n = $("#zN").value.trim() || ("범위 " + (store.zones.length + 1));
   let z;
   if (zShape === "c") { if (!d.c || !d.r) { $("#zMsg").textContent = "중심과 가장자리를 탭하세요"; return; } z = { t: "c", c: d.c, r: d.r }; }
   else { if (d.p.length < 3) { $("#zMsg").textContent = "꼭짓점을 3개 이상 탭하세요"; return; } z = { t: "p", p: d.p }; }
