@@ -166,9 +166,10 @@ body.fsb{overflow:hidden}
 
 #map{width:100%;height:100%}
 .lmk{position:relative;width:0;height:0}
-.lmk .t{position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;background:#f59e0b;color:#1b1300;font:700 12px/1 system-ui,sans-serif;padding:5px 8px;border-radius:7px;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.5)}
-.lmk .t:after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);border:5px solid transparent;border-top-color:#f59e0b}
-.lmk.sel .t{background:#1b1300;color:#fbbf24}
+.lmk .d{position:absolute;left:-9px;top:-9px;width:18px;height:18px;transform:rotate(45deg);background:#f59e0b;border:2px solid #fff;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.45);box-sizing:border-box}
+.lmk.sel .d{background:#1b1300;border-color:#fbbf24}
+#lhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
+#lhead .sm{font-weight:400;font-size:11px;color:var(--muted)}
 .lrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:8px 2px}
 .lrow .bd{background:#f59e0b;color:#1b1300;font-weight:700;font-size:11px;border-radius:5px;padding:2px 6px}
 .lrow .sub{color:var(--muted);font-size:12px}
@@ -214,7 +215,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-k</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-l</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -275,8 +276,8 @@ body.fsb{overflow:hidden}
         <div class="group"><span class="lab">오픈업</span><div class="seg" id="fOu"></div></div>
         <div class="group"><span class="lab">방문</span><div class="seg" id="fVisit"></div></div>
       </div>
-      <div class="panel" id="lpanel" hidden><b style="font-size:13px">부동산 매물 <span id="lcount"></span></b> <span style="font-size:11px;color:var(--muted)">(부동산에서 확인된 매물)</span><div id="lrows"></div></div>
       <div class="panel detail" id="detail"></div>
+      <div class="panel" id="lpanel" hidden><button type="button" id="lhead" aria-expanded="false"><span>부동산 매물 <span id="lcount"></span> <span class="sm">(확인된 매물)</span></span><span id="larr">▸</span></button><div id="lrows" hidden></div></div>
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
@@ -757,6 +758,7 @@ function geocodeL(l) {
     } catch (e) { res(false); }
   });
 }
+function lOpen(on) { $("#lrows").hidden = !on; $("#larr").textContent = on ? "▾" : "▸"; $("#lhead").setAttribute("aria-expanded", String(on)); }
 function paintListings() {
   const p = $("#lpanel"), box = $("#lrows"); if (!p) return;
   p.hidden = !LIST.length; $("#lcount").textContent = LIST.length ? LIST.length + "건" : ""; box.innerHTML = "";
@@ -768,7 +770,7 @@ function paintListings() {
     b.lastChild.textContent = "권리금 " + manwon(l.key);
     b.onclick = () => selectListing(i); box.appendChild(b);
   });
-  LMK.forEach((m, i) => { if (!m) return; try { m.setIcon({ content: '<div class="lmk' + (selectedL === i ? " sel" : "") + '"><div class="t">매물 ' + (LIST[i].name || "").replace(/[<>&]/g, "") + '</div></div>', anchor: new naver.maps.Point(0, 0) }); } catch (e) {} });
+  LMK.forEach((m, i) => { if (!m) return; try { m.setIcon({ content: '<div class="lmk' + (selectedL === i ? " sel" : "") + '"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) }); } catch (e) {} });
 }
 function selectListing(i) {
   const prev = selected; selected = null; selectedL = i; fsHidden = false;
@@ -791,6 +793,7 @@ function renderListing(l, el) {
   if (!l.la) { const m = document.createElement("div"); m.className = "msg"; m.style.cssText = "font-size:12px;color:#b42318;margin-top:6px"; m.textContent = "지도 위치를 찾지 못해 표시하지 못했습니다 (주소 변환 실패)."; el.appendChild(m); }
 }
 let lastL = 0;
+$("#lhead").onclick = () => lOpen($("#lrows").hidden);
 async function loadListings(force) {
   if (!syOn()) return; if (!force && Date.now() - lastL < 120000) return; lastL = Date.now();
   try {
@@ -798,7 +801,7 @@ async function loadListings(force) {
     const next = rows.filter((r) => r["매물명"] || r["주소"]).map((r) => ({ name: String(r["매물명"] || r["주소"]), addr: String(r["주소"] || ""), area: String(r["상권"] || ""), status: String(r["현재 상태"] || ""), rent: r["월세"], dep: r["보증금"], key: r["권리금"], neg: String(r["협의예상금"] || ""), py: String(r["평수"] || ""), ppr: r["평당 월세"], ppk: r["평당 권리금"], mgmt: String(r["관리비"] || ""), date: String(r["확인일"] || ""), agent: String(r["확인 부동산"] || ""), tel: String(r["연락처"] || ""), note: String(r["특이사항"] || ""), la: Number(r["위도"]) || 0, lo: Number(r["경도"]) || 0 }));
     LMK.forEach((m) => { try { m && m.setMap(null); } catch (e) {} }); LMK = []; LIST = next;
     for (const l of LIST) await geocodeL(l);
-    if (map && typeof naver !== "undefined") LIST.forEach((l, i) => { if (!l.la) return; const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 20, icon: { content: "<div></div>", anchor: new naver.maps.Point(0, 0) } }); naver.maps.Event.addListener(m, "click", () => selectListing(i)); LMK[i] = m; });
+    if (map && typeof naver !== "undefined") LIST.forEach((l, i) => { if (!l.la) return; const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 20, icon: { content: '<div class="lmk"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) } }); naver.maps.Event.addListener(m, "click", () => selectListing(i)); LMK[i] = m; });
     paintListings(); if (selectedL != null) renderDetail();
   } catch (e) {}
 }
