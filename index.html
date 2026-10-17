@@ -216,7 +216,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-p</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-q</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -646,10 +646,31 @@ function addCustom(a, local) {
 }
 let pickPos = null, pickMk = null, pickBound = false;
 function curCenter() { try { if (map) { const c = map.getCenter(); return { la: c.lat(), lo: c.lng() }; } } catch (e) {} return me || { la: 37.5565, lo: 126.9215 }; }
+function revAddr(la, lo) {
+  return new Promise((res) => {
+    const t = setTimeout(() => res(""), 4000);
+    try {
+      naver.maps.Service.reverseGeocode({ coords: new naver.maps.LatLng(la, lo), orders: "roadaddr,addr" }, (st, rs) => {
+        clearTimeout(t);
+        try {
+          const L = (rs && rs.v2 && rs.v2.results) || [];
+          const nm = (x) => x.land.number1 + (x.land.number2 ? "-" + x.land.number2 : "");
+          const r = L.find((x) => x.name === "roadaddr"), j = L.find((x) => x.name === "addr");
+          const rg = (x) => (x.region.area1.name.replace("특별시", "").replace("광역시", "") + " " + x.region.area2.name).trim();
+          let out = "";
+          if (r) out = rg(r) + " " + r.land.name + " " + nm(r);
+          if (j) out += (out ? " (" : rg(j) + " ") + j.region.area3.name + " " + nm(j) + (out ? ")" : "");
+          res(out.trim());
+        } catch (e) { res(""); }
+      });
+    } catch (e) { clearTimeout(t); res(""); }
+  });
+}
 function setPick(la, lo) {
   pickPos = { la, lo };
   const nz = zOf(null, la, lo), lab = (AREAS.find((a) => a[0] === nz) || [])[1] || "";
   $("#addPos").textContent = "선택 위치 " + la.toFixed(5) + ", " + lo.toFixed(5) + (lab ? " · 권역 자동: " + lab : "");
+  revAddr(la, lo).then((ad) => { if (ad && pickPos && pickPos.la === la && pickPos.lo === lo) $("#addPos").textContent += " · " + ad; });
   try {
     if (!map || typeof naver === "undefined") return;
     const p = new naver.maps.LatLng(la, lo);
@@ -670,11 +691,13 @@ $("#addGps").onclick = () => {
   $("#addMsg").textContent = "";
   try { navigator.geolocation.getCurrentPosition((p) => { setPick(p.coords.latitude, p.coords.longitude); try { map.setCenter(new naver.maps.LatLng(p.coords.latitude, p.coords.longitude)); } catch (e) {} }, () => { $("#addMsg").textContent = "내 위치를 못 가져왔습니다. 지도를 탭해 직접 찍으세요."; }, { enableHighAccuracy: true, timeout: 10000 }); } catch (e) { $("#addMsg").textContent = "내 위치를 못 가져왔습니다. 지도를 탭해 직접 찍으세요."; }
 };
-$("#addOk").onclick = () => {
+$("#addOk").onclick = async () => {
   const n = $("#addN").value.trim(); if (!n) { $("#addMsg").textContent = "매장명을 입력하세요"; return; }
   if (!pickPos) { $("#addMsg").textContent = "지도에서 위치를 먼저 찍으세요"; return; }
   const c = pickPos;
-  const d = addCustom({ n, la: c.la, lo: c.lo, z: zOf(null, c.la, c.lo) }, true);
+  $("#addMsg").textContent = "주소 확인 중…";
+  const ad = await revAddr(c.la, c.lo);
+  const d = addCustom({ n, la: c.la, lo: c.lo, z: zOf(null, c.la, c.lo), j: ad || undefined }, true);
   endPick(); touch(d); refresh(); select(d.id, false);
   try { if (map && typeof naver !== "undefined") map.setCenter(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
 };
