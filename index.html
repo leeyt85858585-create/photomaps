@@ -499,7 +499,7 @@ function renderDetail() {
   el.querySelector("h2").textContent = d.n;
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
-  add(AREAL[d.z]); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(d.s === "none" ? noneFull(d) : ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
+  add(AREAL[d.z]); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); if (d.s !== "none") add(ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
   if (d.custom && /^현장추가 /.test(d.j) && !d.r) {
@@ -517,10 +517,7 @@ function renderDetail() {
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", kakao], ["네이버지도에서 검색", naver]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
   const cx = el.querySelector(".shc");
-  if (d.s === "none") {
-    const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = "오픈업 상태"; cx.appendChild(lab);
-    [["reg", "미등록 (검색 안 됨)"], ["hid", "매출 비공개 (점주 요청)"]].forEach(([v, t]) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; if (d.cls === v) b.className = "on"; b.onclick = () => setCls(d, d.cls === v ? "" : v); cx.appendChild(b); });
-  } else cx.remove();
+  cx.remove(); // 오픈업 상태(미등록/비공개)는 Claude가 확인해 OC로 관리 — 수동 선택 UI 제거
   if (d.custom) buildCustomTools(d, el);
   renderPhotos(d, el.querySelector(".shp"));
   const bx = el.querySelector(".shb"), bv = store.booth[k] || 0, other = bv > 8;
@@ -984,15 +981,14 @@ let syq = {}; try { syq = JSON.parse(localStorage.getItem(SYQ) || "{}"); } catch
 const syOn = () => !!(sy.url && sy.token);
 if (store.migq && store.migq.length) { store.migq.forEach((k) => { if (!store.ts[k]) store.ts[k] = 1; syq[k] = 1; }); store.migq = []; save(); try { localStorage.setItem(SYQ, JSON.stringify(syq)); } catch (e) {} setTimeout(() => { if (syOn()) syFlush(); }, 2500); }
 const CLSK = { reg: "미등록", hid: "매출 비공개" }, CLSV = { "미등록": "reg", "매출 비공개": "hid" };
-// 오픈업 자동 확인 결과(26.10.17): 미등록/매출 비공개 기본값. 사용자가 직접 고른 값·시트 값이 항상 우선, 한 번만 적용.
+// 오픈업 자동 확인 결과(26.10.17): 미등록/매출 비공개. Claude가 관리하며 이 값이 기준(시트 값과 다르면 이 값으로 갱신).
 const OC = {"마포구 동교동 148-4 지층|아날로그 연남점":"reg","마포구 동교동 150-19 1층|포토그레이 연남점":"reg","마포구 동교동 152-1 1층 오토포토|오토포토 연남":"reg","마포구 연남동 224-60 1층 sticka|스티카 연남점":"reg","마포구 연남동 227-16|돈룩업 연남":"hid","마포구 연남동 228-45 1층|코드 by 포토시그니처 연남점":"hid","마포구 연남동 258-1|얼짱스티커사진":"reg","마포구 연남동 259-9 1층|포토그레이 연남 3호점":"reg","마포구 연남동 260-11 2층|비메모리 연남본점":"hid","서대문구 연희동 128-10|부스바이모노맨션 1102":"reg","마포구 서교동 335-4 2층 202호|레토 빈티지 포토부스":"reg","마포구 서교동 347-24|포토이즘 박스 서울 홍대역점":"reg","마포구 서교동 358-114 1층|포토그레이 홍대 2호점":"reg","마포구 서교동 358-124 1층|포토하라 홍대점":"reg","마포구 서교동 358-125 1층|BYTP 와우산로":"reg","마포구 서교동 364-21 1층|언프레임 홍대레드로드점":"hid","마포구 서교동 364-21 1층|덥티 홍대상상마당점":"hid","마포구 서교동 365-10|홍대네컷 홍대2호점":"reg","마포구 서교동 365-19|홍대네컷 홍대3호점":"reg","마포구 상수동 317-8 103호|아우라픽 상수점":"reg","마포구 서교동 398-16|부스바이모노맨션 1114":"reg","마포구 서교동 401-16 1층 EXIT|엑시트 합정점":"reg","마포구 서교동 403-15 1층|RGB PHOTO STUDIO 상수점":"reg","마포구 서교동 408-12 1층 포토랩플러스 홍대2호점|포토랩플러스 홍대2호점":"reg","마포구 서교동 408-31 1층 1호|포토오브제 홍대상수점":"hid","마포구 서교동 411-16 선우빌딩 일층 홍대네컷|홍대네컷 상수점":"reg","마포구 합정동 413-2 1층|더필름 합정점":"hid","마포구 합정동 413-4 1층|포토그레이 합정점":"reg","마포구 합정동 414-16|돈룩업 합정":"reg","용산구 이태원동 129-2 2층|홍대네컷 이태원점":"reg","용산구 이태원동 128-9 1층|포토그레이 이태원점":"reg","서대문구 대현동 34-29|petfany":"reg","서대문구 대현동 33-15 1층|더필름 이대점":"hid","서대문구 대현동 60-9 1층|포토이즘박스 이대점":"reg","중구 을지로3가 320-29 1층|모드빈티크 을지로":"hid","종로구 화동 138-18 1층|포토그레이 삼청동점":"reg","종로구 화동 99 1층|선비넉장":"hid","종로구 소격동 18 1층 인생네컷|인생네컷 삼청점":"hid","종로구 사간동 119-1|SHUTTER K":"reg","종로구 관훈동 38 3층|포토콤마 인사동쌈지길점":"reg","종로구 관훈동 155-2 3층|인생네컷 안녕인사동점":"reg","종로구 체부동 38 1층|스튜디오모토 서촌점":"hid","종로구 누하동 77-4 1층|포토콤마 서촌점":"reg","종로구 체부동 23-1|포토그레이 서울서촌점":"reg","종로구 적선동 11 1층|가로필름 경복궁점":"reg","종로구 통인동 141-2 1층 오토포토|오토포토 서촌":"reg","종로구 체부동 17 1층|덥티 서촌점":"reg","종로구 체부동 27|포토이즘박스 서촌점":"hid","종로구 동숭동 1-135 1층|비룸스튜디오 혜화대학로점":"reg","종로구 동숭동 1-85|혜화네컷":"reg","종로구 동숭동 1-61 송은빌딩 1층 103호|츄스티커사진 대학로점":"hid","종로구 명륜4가 54-1|포토그레이 대학로점":"reg","종로구 명륜4가 53 1층|모드빈티크 대학로":"hid","종로구 익선동 126-3 1층|포토랩플러스 라이브러리 익선점":"reg","종로구 권농동 191-3|캠백 서순라길":"reg","종로구 익선동 161-1|익선네컷 셀프사진관":"reg","종로구 익선동 166-64|포토그레이 익선동점":"reg","종로구 낙원동 119 1층|모노맨션 익선점":"reg","종로구 관철동 13-13 1층 포토시그니처 종각점|포토시그니처 종각점":"hid","종로구 관철동 14-10 1층|포토그레이 종각점":"reg","성동구 성수동1가 685-704 A11|치즈문포토":"reg","성동구 성수동1가 685-704 언더스탠드에비뉴 A동 11호|미소포토부스 서울숲":"reg","성동구 성수동1가 668-134 지하1층|포토시그니처 서울숲점":"reg","성동구 성수동1가 668-134|포토그레이 서울숲점":"reg","성동구 성수동1가 668-49 1층 하루필름|하루필름 서울숲점":"reg","중구 을지로3가 296-14 1층 픽닷 을지로점|픽닷 을지로점":"hid","중구 을지로3가 320-3 1층|포토이즘박스 을지로점":"hid","중구 초동 110|포토시그니처 힙지로점":"reg","용산구 한강로1가 214 1층|포토그레이 용리단길점":"reg","용산구 한강로2가 49-3|포토랩플러스 라이브러리 용리단길점":"reg","용산구 한강로2가 98-2|돈룩업 용리단길":"hid","용산구 한강로3가 40-999 3층|인생네컷 용산아이파크몰점":"reg","용산구 용산동2가 1-499 1층|모드빈티크 해방촌":"hid","용산구 용산동2가 1-52 1층 autofoto|오토포토 신흥":"reg"};
 store.ocDone = store.ocDone || {}; let ocApplied = false;
 function applyOC() {
   if (ocApplied) return; ocApplied = true; let n = 0;
   for (const k in OC) {
-    if (store.ocDone[k]) continue; const d = byKey(k); if (!d) continue;
-    store.ocDone[k] = 1;
-    if (!store.cls[k]) { store.cls[k] = OC[k]; d.cls = OC[k]; store.ts[k] = Date.now(); syq[k] = 1; n++; }
+    const d = byKey(k); if (!d) continue;
+    if (store.cls[k] !== OC[k]) { store.cls[k] = OC[k]; d.cls = OC[k]; store.ts[k] = Date.now(); syq[k] = 1; n++; }
   }
   save(); syQSave();
   if (n) { try { refresh(); renderDetail(); } catch (e) {} if (syOn()) { clearTimeout(syTimer); syTimer = setTimeout(syFlush, 800); } }
