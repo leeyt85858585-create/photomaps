@@ -113,7 +113,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 .item { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; cursor: pointer; }
 .item:last-child { border-bottom: 0; }
 .item:hover, .item[aria-current="true"] { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.item .zdot { width: 10px; height: 10px; border-radius: 50%; }
+.item .zdot { width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; }
 .item .nm { font-weight: 500; overflow-wrap: anywhere; }
 .item .rd { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .item .rv { font-family: var(--font-num); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; color: var(--ink); white-space: nowrap; }
@@ -206,7 +206,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-i</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-j</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -223,7 +223,7 @@ body.fsb{overflow:hidden}
       <div class="mapctl">
         <button id="lgbtn" class="lgbtn" type="button" aria-expanded="false">범례 ▸</button>
         <div class="legend" id="legend" hidden>
-        <div class="title">권역 면 색 = 추정 실매출 중앙값 (상한+400, 만원)</div>
+        <div class="title">권역 면 색 = 추정 실매출 평균 (상한+400, 만원) · 중앙값 병기</div>
         <div class="row">
           <span class="it"><span class="dot" style="background:#f6e3a8;border-radius:3px"></span>~1,000</span>
           <span class="it"><span class="dot" style="background:#f2c58e;border-radius:3px"></span>~2,000</span>
@@ -271,6 +271,7 @@ body.fsb{overflow:hidden}
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
+        <div class="listnote" style="font-size:11px;color:var(--muted);padding:2px 12px 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">점 색 = 추정 실매출 <span style="display:inline-block;width:70px;height:8px;border-radius:4px;border:1px solid rgba(198,40,40,.45);background:linear-gradient(90deg,#fff,#c62828)"></span> 낮음→높음(5,000만+) · <span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px dashed #8b97a1;box-sizing:border-box"></span> 매출 미확인</div>
         <div class="rows" id="rows"></div>
       </div>
       <details class="panel" id="syp"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">구글 시트 연동 설정</summary>
@@ -445,7 +446,8 @@ function renderList() {
   rows.forEach((d) => {
     const b = document.createElement("button"); b.type = "button"; b.className = "item"; b.dataset.id = d.id;
     if (selected === d.id) b.setAttribute("aria-current", "true");
-    b.innerHTML = '<span class="zdot" style="background:' + AREAC[d.z] + '"></span><span><div class="nm"></div><div class="rd"></div></span><span class="rv"></span>';
+    b.innerHTML = '<span class="zdot"></span><span><div class="nm"></div><div class="rd"></div></span><span class="rv"></span>';
+    { const z = b.querySelector(".zdot"); if (d.hi == null) { z.style.background = "transparent"; z.style.border = "2px dashed #8b97a1"; } else { const t = Math.pow(Math.min(1, (d.hi + 400) / 5000), 0.75); z.style.background = "color-mix(in srgb, #c62828 " + Math.round(t * 100) + "%, #ffffff)"; z.style.border = "1px solid rgba(198,40,40,.45)"; } }
     b.querySelector(".nm").textContent = d.n + (d.vis ? "  ✓" : "");
     b.querySelector(".rd").textContent = AREAL[d.z] + " · " + d.r + (d.dist != null ? " · " + fmtDist(d.dist) : "");
     const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na");
@@ -537,9 +539,9 @@ function buildMemos(d, k) {
 function buildCmp() {
   const g = {}; DATA.forEach((d) => { const a = AREAL[d.z]; const o = g[a] || (g[a] = { n: 0, v: [] }); o.n++; if (d.hi != null) o.v.push(d.hi + 400); });
   const med = (v) => { const a = [...v].sort((x, y) => x - y), m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
-  const rows = Object.entries(g).map(([a, o]) => ({ a, n: o.n, k: o.v.length, m: o.v.length ? med(o.v) : null, p: o.v.length ? o.v.reduce((x, y) => x + y, 0) / o.v.length : null, h: o.v.filter((x) => x >= 3000).length })).sort((x, y) => (y.m ?? -1) - (x.m ?? -1));
-  let h = '<table style="border-collapse:collapse;font-size:12px;white-space:nowrap"><tr><th align=left>권역</th><th>매출확인/전체</th><th>중앙값</th><th>평균</th><th>3천↑</th></tr>';
-  rows.forEach((r) => { h += "<tr><td>" + r.a + "</td><td align=center>" + r.k + "/" + r.n + "</td><td align=right>" + (r.m == null ? "—" : Math.round(r.m).toLocaleString()) + "</td><td align=right>" + (r.p == null ? "—" : Math.round(r.p).toLocaleString()) + "</td><td align=center>" + r.h + "</td></tr>"; });
+  const rows = Object.entries(g).map(([a, o]) => ({ a, n: o.n, k: o.v.length, m: o.v.length ? med(o.v) : null, p: o.v.length ? o.v.reduce((x, y) => x + y, 0) / o.v.length : null, h: o.v.filter((x) => x >= 3000).length })).sort((x, y) => (y.p ?? -1) - (x.p ?? -1));
+  let h = '<table style="border-collapse:collapse;font-size:12px;white-space:nowrap"><tr><th align=left>권역</th><th>매출확인/전체</th><th>평균</th><th>중앙값</th><th>3천↑</th></tr>';
+  rows.forEach((r) => { h += "<tr><td>" + r.a + "</td><td align=center>" + r.k + "/" + r.n + "</td><td align=right>" + (r.p == null ? "—" : Math.round(r.p).toLocaleString()) + "</td><td align=right>" + (r.m == null ? "—" : Math.round(r.m).toLocaleString()) + "</td><td align=center>" + r.h + "</td></tr>"; });
   $("#cmpbox").innerHTML = h + "</table>"; $("#cmpbox").querySelectorAll("td,th").forEach((c) => c.style.padding = "3px 8px");
 }
 function select(id, fromList) {
@@ -568,14 +570,14 @@ function hull(pts) {
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT } });
   const TIER = [[1000, "#f6e3a8"], [2000, "#f2c58e"], [3000, "#e9a07c"], [5000, "#d97b66"], [1e9, "#b5524a"]];
-  const medOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+  const statOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return { avg: v.reduce((a, b) => a + b, 0) / v.length, med: v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2 }; };
   AREAS.forEach(([z, label, col0]) => {
-    const md = medOf(z), col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
+    const st = statOf(z), md = st ? st.avg : null, col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
     const h = hull(pts); if (h.length < 3) return;
     new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: col, fillOpacity: md == null ? 0.04 : 0.12, strokeColor: col, strokeOpacity: 0.8, strokeWeight: 2.5, strokeStyle: md == null ? "shortdash" : "solid", clickable: false });
     const top = h.reduce((a, p) => p.y > a.y ? p : a, h[0]);
-    new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + (md == null ? " · 매출 미확인" : " · 중앙값 " + Math.round(md).toLocaleString() + "만") + '</div>', anchor: new naver.maps.Point(0, 0) } });
+    new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + label + (md == null ? " · 매출 미확인" : " · 평균 " + Math.round(md).toLocaleString() + "만 (중앙값 " + Math.round(st.med).toLocaleString() + ")") + '</div>', anchor: new naver.maps.Point(0, 0) } });
   });
   DATA.forEach((d) => {
     const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.mla, d.mlo), icon: { content: iconHtml(d), anchor: new naver.maps.Point(0, 0) }, zIndex: 10 });
