@@ -234,7 +234,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-x</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-y</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -916,13 +916,13 @@ function zShapeObj(z, col, dashed) {
 function zOpen(on) { $("#zrows").hidden = !on; $("#zarr").textContent = on ? "▾" : "▸"; $("#zhead").setAttribute("aria-expanded", String(on)); }
 $("#zhead").onclick = () => zOpen($("#zrows").hidden);
 function paintZones() {
-  Object.values(zOv).forEach((o) => { try { o.s.setMap(null); o.l.setMap(null); } catch (e) {} }); zOv = {};
+  Object.values(zOv).forEach((o) => { try { o.s.setMap(null); } catch (e) {} }); zOv = {};
   const box = $("#zrows"); box.innerHTML = ""; $("#zcount").textContent = store.zones.length ? "(" + store.zones.length + ")" : "";
   if (!store.zones.length) { const e = document.createElement("div"); e.className = "sm"; e.style.cssText = "padding:6px 0;font-size:12px;color:var(--muted)"; e.textContent = "지도 왼쪽 위 ‘＋ 범위 매출’로 원이나 다각형을 그리면, 그 안에 든 매장의 매출을 따로 집계합니다."; box.appendChild(e); }
   store.zones.forEach((z, i) => {
     const col = ZCOL[i % ZCOL.length], st = zStats(z);
     const lab = z.n + " · " + (st.avg == null ? "매출 미확인" : "평균 " + fm(st.avg) + " (중앙값 " + fm(st.med) + ")") + " · " + st.m.length + "곳";
-    if (map && typeof naver !== "undefined") { try { const c = zCenter(z); zOv[z.id] = { s: zShapeObj(z, col), l: new naver.maps.Marker({ map, position: new naver.maps.LatLng(c[0], c[1]), clickable: false, zIndex: 6, icon: { content: '<div class="zl" style="color:' + col + ';text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-50%)">' + lab.replace(/</g, "&lt;") + '</div>', anchor: new naver.maps.Point(0, 0) } }) }; } catch (e) {} }
+    if (map && typeof naver !== "undefined") { try { const c = zCenter(z); zOv[z.id] = { s: zShapeObj(z, col) }; } catch (e) {} }
     const r = document.createElement("div"); r.className = "zrow";
     const t = document.createElement("b"); t.style.color = col; t.textContent = z.n; r.appendChild(t);
     const m1 = document.createElement("div"); m1.textContent = "매장 " + st.m.length + "곳 (매출 확인 " + st.v.length + "곳) · 평균 " + fm(st.avg) + " · 중앙값 " + fm(st.med) + (st.max != null ? " · 최저 " + fm(st.min) + " ~ 최고 " + fm(st.max) : ""); r.appendChild(m1);
