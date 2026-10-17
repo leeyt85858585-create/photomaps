@@ -225,7 +225,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-s</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-t</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -502,7 +502,11 @@ function renderDetail() {
   add(AREAL[d.z]); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(d.s === "none" ? noneFull(d) : ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
-  if (d.custom) { const jm = String(d.j).match(/\((.+)\)\s*$/); if (d.r) row("도로명", d.r); if (jm) row("지번", jm[1]); if (!d.r) row("주소", d.j); }
+  if (d.custom && /^현장추가 /.test(d.j) && !d.r) {
+    store.caddr = store.caddr || {}; const k = skey(d);
+    if (store.caddr[k]) { const a = store.caddr[k]; row("도로명", a.split(" (")[0]); const m2 = a.match(/\((.+)\)\s*$/); if (m2) row("지번", m2[1]); }
+    else { row("주소", "조회 중… (" + d.j.replace("현장추가 ", "") + ")"); if (!d.adTry) { d.adTry = 1; revAddr(d.la, d.lo).then((a) => { if (a) { store.caddr[k] = a; save(); if (selected === d.id) renderDetail(); } }); } }
+  } else if (d.custom) { const jm = String(d.j).match(/\((.+)\)\s*$/); if (d.r) row("도로명", d.r); if (jm) row("지번", jm[1]); if (!d.r) row("주소", d.j); }
   else if (d.r) row("도로명", d.r); else row("주소", d.j);
   if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
   else row("오픈업", noneFull(d));
@@ -717,7 +721,9 @@ $("#addOk").onclick = async () => {
   if (!pickPos) { $("#addMsg").textContent = "지도에서 위치를 먼저 찍으세요"; return; }
   const c = pickPos;
   $("#addMsg").textContent = "주소 확인 중…";
-  const ad = await revAddr(c.la, c.lo);
+  let ad = await revAddr(c.la, c.lo);
+  if (!ad) ad = await revAddr(c.la, c.lo);
+  if (!ad) { $("#addMsg").textContent = "주소를 못 가져와 좌표로 저장합니다 (나중에 상세에서 자동 보완)"; await new Promise((r) => setTimeout(r, 900)); }
   const d = addCustom({ n, la: c.la, lo: c.lo, z: zOf(null, c.la, c.lo), j: ad || undefined }, true);
   endPick(); touch(d); refresh(); select(d.id, false);
   try { if (map && typeof naver !== "undefined") map.setCenter(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
