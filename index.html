@@ -131,7 +131,12 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 .addp input,.addp select{font-size:16px;padding:6px 8px;max-width:100%}
 .addp label{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
 .addp .msg{font-size:12px;color:#b42318}
-.addp .btns{display:flex;gap:8px}
+.addp .btns{display:flex;gap:8px;flex-wrap:wrap}
+.mapcard.fs{position:fixed;inset:0;z-index:1000;height:100vh;height:100dvh;min-height:0;border-radius:0;border:0}
+body.fsb{overflow:hidden}
+#fsbar{position:absolute;left:10px;right:10px;bottom:14px;z-index:7;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.3);display:none;font-size:14px;gap:8px;align-items:center;justify-content:space-between}
+.mapcard.fs #fsbar.on{display:flex}
+.mapcard.fs .addp{bottom:14px}
 .detail .shb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
 .detail .shb .lab{font-size:12px;color:var(--muted)}
 .detail .shb button{min-width:38px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:15px;cursor:pointer}
@@ -198,7 +203,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-b</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-f</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -240,15 +245,17 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
         </div>
         <button id="locbtn" class="lgbtn" type="button">내 위치</button>
         <button id="addbtn" class="lgbtn" type="button">＋ 매장 추가</button>
+        <button id="fsbtn" class="lgbtn" type="button">전체화면</button>
       </div>
             <div class="addp" id="addp" hidden>
         <b>현장에서 매장 추가</b>
         <input id="addN" type="text" placeholder="매장명 (예: 포토OO 연남점)">
-        <label>위치 <select id="addWhere"><option value="gps">내 위치(GPS)</option><option value="center">지도 중앙(십자 위치)</option></select></label>
-        <label>권역 <select id="addZ"></select></label>
+        <div id="addPos" style="font-size:13px;color:var(--muted)">지도에서 건물을 탭해 위치를 찍으세요 (핀은 끌어서 옮길 수 있음)</div>
+        <div class="btns"><button type="button" class="lgbtn" id="addGps">내 위치로</button></div>
         <div id="addMsg" class="msg"></div>
         <div class="btns"><button type="button" class="lgbtn" id="addOk">추가</button><button type="button" class="lgbtn" id="addCancel">취소</button></div>
       </div>
+      <div id="fsbar"><span id="fsname"></span><button type="button" class="lgbtn" id="fsdet">상세 보기</button></div>
       <div class="viewer" id="viewer" hidden></div>
     </div>
     <div class="side">
@@ -267,7 +274,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
         <div style="display:grid;gap:8px;margin-top:8px">
           <input id="syUrl" type="url" placeholder="웹앱 주소 (https://script.google.com/.../exec)" style="font-size:16px;padding:6px 8px">
           <input id="syTok" type="password" placeholder="비밀키" autocomplete="off" style="font-size:16px;padding:6px 8px">
-          <input id="syWho" type="text" placeholder="내 이름 (예: 나 / 파트너)" style="font-size:16px;padding:6px 8px">
+          <input id="syWho" type="hidden"><div id="syWhoRow" class="shb"><span class="lab">이 기기 사용자</span><button type="button" data-w="이">이</button><button type="button" data-w="홍">홍</button></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lgbtn" id="sySave">저장·연결</button><button type="button" class="lgbtn" id="sySync">지금 동기화</button><button type="button" class="lgbtn" id="syInv">초대 링크 복사</button><button type="button" class="lgbtn" id="syRe">내 기록 전부 다시 보내기</button></div>
           <div id="sySt" style="font-size:12px;color:var(--muted)"></div>
         </div></details>
@@ -295,7 +302,11 @@ try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(sto
 function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 const skey = (d) => d.j + "|" + d.n;
 store.cls = store.cls || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
-store.added = store.added || [];
+store.added = store.added || []; store.removed = store.removed || {};
+store.added = store.added.filter((a) => !store.removed[(a.j || ("현장추가 " + a.la.toFixed(5) + "," + a.lo.toFixed(5))) + "|" + a.n]);
+store.memos = store.memos || {}; store.memo = store.memo || {};
+Object.keys(store.memo).forEach((k) => { const t = store.memo[k]; if (t && !(store.memos[k] && store.memos[k]["홍"])) { (store.memos[k] = store.memos[k] || {})["홍"] = { t: String(t), ts: store.ts[k] || 1 }; } delete store.memo[k]; });
+save();
 function mkCustom(a) { return { z: a.z, n: a.n, j: a.j, r: "(현장 추가)", la: a.la, lo: a.lo, s: "none", on: null, orr: null, mo: null, rev: null, hi: null, id: DATA.length, custom: 1 }; }
 store.added.forEach((a) => DATA.push(mkCustom(a)));
 const seen = {};
@@ -392,7 +403,7 @@ function openViewer(d, p, after) {
   bar.append(save1, del, x); v.append(im, bar); v.onclick = (e) => { if (e.target === v) close(); };
 }
 function exportNotes() {
-  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 부스수: store.booth, 추가매장: store.added, 오픈업분류: store.cls };
+  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memos, 부스수: store.booth, 추가매장: store.added, 오픈업분류: store.cls };
   const u = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
   const a = document.createElement("a"); a.href = u; a.download = "임장기록_" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000);
 }
@@ -434,15 +445,15 @@ function renderDetail() {
   const naver = "https://map.naver.com/p/search/" + encodeURIComponent(d.n);
   el.innerHTML = '<h2></h2><div class="badges"></div><dl></dl><div class="links"></div>'
     + '<label class="check"><input type="checkbox" id="vchk"><span>방문했음</span></label>'
-    + '<div class="shb"></div><textarea id="memo" placeholder="현장 메모 (유동, 간판, 공실 등)"></textarea><div class="shp"></div><div class="shc"></div>';
+    + '<div class="shb"></div><div id="memos"></div><div class="shp"></div><div class="shc"></div>';
   el.querySelector("h2").textContent = d.n;
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
   add(AREAL[d.z]); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(d.s === "none" ? noneFull(d) : ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
-  row("지번", d.j); row("도로명", d.r);
-  if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr) row("오픈업 주소", d.orr); }
+  if (d.r) row("도로명", d.r); else row("주소", d.j);
+  if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
   else row("오픈업", noneFull(d));
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", kakao], ["네이버지도에서 검색", naver]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
@@ -451,6 +462,7 @@ function renderDetail() {
     const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = "오픈업 상태"; cx.appendChild(lab);
     [["reg", "미등록 (검색 안 됨)"], ["hid", "매출 비공개 (점주 요청)"]].forEach(([v, t]) => { const b = document.createElement("button"); b.type = "button"; b.textContent = t; if (d.cls === v) b.className = "on"; b.onclick = () => setCls(d, d.cls === v ? "" : v); cx.appendChild(b); });
   } else cx.remove();
+  if (d.custom) buildCustomTools(d, el);
   renderPhotos(d, el.querySelector(".shp"));
   const bx = el.querySelector(".shb"), bv = store.booth[k] || 0, other = bv > 6 || boothOther === k;
   const bl = document.createElement("span"); bl.className = "lab"; bl.textContent = "부스 수"; bx.appendChild(bl);
@@ -459,8 +471,34 @@ function renderDetail() {
   if (other) { const i = document.createElement("input"); i.type = "number"; i.inputMode = "numeric"; i.min = 7; i.placeholder = "직접 입력"; i.value = bv > 6 ? bv : ""; i.className = "boothin"; i.onchange = () => { const n = parseInt(i.value, 10); setBooth(d, n > 0 ? n : 0); }; bx.appendChild(i); const u = document.createElement("span"); u.className = "lab"; u.textContent = "개"; bx.appendChild(u); }
   const chk = $("#vchk"); chk.checked = d.vis;
   chk.onchange = () => setVis(d, chk.checked);
-  const memo = $("#memo"); memo.value = store.memo[k] || "";
-  memo.oninput = () => { if (memo.value) store.memo[k] = memo.value; else delete store.memo[k]; save(); touch(d); };
+  buildMemos(d, k);
+}
+function whoNow() { try { return sy.who === "이" || sy.who === "홍" ? sy.who : ""; } catch (e) { return ""; } }
+function fmtTs(ts) { return ts > 1e12 ? new Date(ts).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""; }
+function setWho(v) { try { sy.who = v; localStorage.setItem(SYK, JSON.stringify(sy)); } catch (e) {} const h = $("#syWho"); if (h) h.value = v; paintWho(); }
+function paintWho() { document.querySelectorAll("#syWhoRow button").forEach((b) => b.classList.toggle("on", b.dataset.w === whoNow())); }
+function buildMemos(d, k) {
+  const box = $("#memos"); if (!box) return; box.innerHTML = "";
+  const me = whoNow();
+  if (!me) {
+    const w = document.createElement("div"); w.className = "shb";
+    const l = document.createElement("span"); l.className = "lab"; l.textContent = "작성자 선택"; w.appendChild(l);
+    ["이", "홍"].forEach((v) => { const b = document.createElement("button"); b.type = "button"; b.textContent = v; b.onclick = () => { setWho(v); renderDetail(); }; w.appendChild(b); });
+    box.appendChild(w); return;
+  }
+  const mm = store.memos[k] || {}, other = me === "이" ? "홍" : "이";
+  const mk = (a, mine) => {
+    const wrap = document.createElement("div"); wrap.style.marginTop = "6px";
+    const lab = document.createElement("div"); lab.className = "lab"; lab.style.fontSize = "12px"; lab.style.color = "var(--muted)";
+    const paint = () => { const m = (store.memos[k] || {})[a]; lab.textContent = (mine ? "내 메모" : "상대 메모 · " + a) + (m && m.ts > 1e12 ? " · " + fmtTs(m.ts) : ""); };
+    const ta = document.createElement("textarea"); ta.dataset.a = a; ta.rows = 3; ta.style.width = "100%"; ta.style.boxSizing = "border-box";
+    ta.placeholder = mine ? "현장 메모 (유동, 간판, 공실 등)" : a + "의 메모 (고치거나 지울 수 있음)";
+    ta.value = (mm[a] && mm[a].t) || "";
+    ta.oninput = () => { (store.memos[k] = store.memos[k] || {})[a] = { t: ta.value, ts: Date.now() }; save(); touch(d); paint(); };
+    paint(); wrap.append(lab, ta); box.appendChild(wrap);
+  };
+  mk(me, true);
+  if (mm[other] && mm[other].t) mk(other, false);
 }
 
 function buildCmp() {
@@ -473,7 +511,7 @@ function buildCmp() {
 }
 function select(id, fromList) {
   if (syOn() && Date.now() - lastPull > 4000) syPull();
-  const prev = selected; selected = id; renderDetail(); renderList(); renderSheet();
+  const prev = selected; selected = id; renderDetail(); renderList(); renderSheet(); try { fsInfo(); } catch (e) {}
   if (prev != null) setIcon(prev);
   setIcon(id);
   if (fromList && window.innerWidth <= 920) { try { document.querySelector(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
@@ -529,7 +567,7 @@ $("#sort").onchange = () => { if ($("#sort").value === "near" && !me) locate(); 
 $("#locbtn").onclick = locate;
 $("#expbtn").onclick = exportNotes;
 $("#cpbtn").onclick = async () => {
-  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 부스수: store.booth, 추가매장: store.added, 오픈업분류: store.cls };
+  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memos, 부스수: store.booth, 추가매장: store.added, 오픈업분류: store.cls };
   const t = JSON.stringify(data), box = $("#cpbox"), msg = $("#cpmsg");
   box.value = t; box.hidden = false; box.focus(); box.select();
   try { await navigator.clipboard.writeText(t); msg.textContent = "복사됐습니다. 카톡 대화창에 붙여넣어 보내세요."; }
@@ -558,24 +596,93 @@ function addCustom(a, local) {
   if (!local) refresh();
   return d;
 }
-function buildAddForm() {
-  const sel = $("#addZ"); sel.innerHTML = ""; AREAS.forEach(([z, label]) => { const o = document.createElement("option"); o.value = z; o.textContent = label; sel.appendChild(o); });
-}
+let pickPos = null, pickMk = null, pickBound = false;
 function curCenter() { try { if (map) { const c = map.getCenter(); return { la: c.lat(), lo: c.lng() }; } } catch (e) {} return me || { la: 37.5565, lo: 126.9215 }; }
-$("#addbtn").onclick = () => { buildAddForm(); const c = (me && $("#addWhere").value === "gps") ? me : curCenter(); $("#addZ").value = zOf(null, c.la, c.lo); $("#addp").hidden = false; $("#addN").value = ""; $("#addMsg").textContent = ""; setTimeout(() => $("#addN").focus(), 50); };
-$("#addCancel").onclick = () => { $("#addp").hidden = true; };
-$("#addWhere").onchange = () => { if ($("#addWhere").value === "gps" && !me) locate(); };
-$("#addOk").onclick = async () => {
+function setPick(la, lo) {
+  pickPos = { la, lo };
+  const nz = zOf(null, la, lo), lab = (AREAS.find((a) => a[0] === nz) || [])[1] || "";
+  $("#addPos").textContent = "선택 위치 " + la.toFixed(5) + ", " + lo.toFixed(5) + (lab ? " · 권역 자동: " + lab : "");
+  try {
+    if (!map || typeof naver === "undefined") return;
+    const p = new naver.maps.LatLng(la, lo);
+    if (!pickMk) {
+      pickMk = new naver.maps.Marker({ map, position: p, draggable: true, zIndex: 99, icon: { content: '<div style="font-size:30px;line-height:30px;transform:translate(-50%,-100%);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">📍</div>', anchor: new naver.maps.Point(0, 0) } });
+      naver.maps.Event.addListener(pickMk, "dragend", () => { const q = pickMk.getPosition(); setPick(q.lat(), q.lng()); });
+    } else { pickMk.setMap(map); pickMk.setPosition(p); }
+  } catch (e) {}
+}
+function endPick() { pickPos = null; $("#addp").hidden = true; try { if (pickMk) pickMk.setMap(null); } catch (e) {} }
+$("#addbtn").onclick = () => {
+  pickPos = null; $("#addp").hidden = false; $("#addN").value = ""; $("#addMsg").textContent = ""; $("#addPos").textContent = "지도에서 건물을 탭해 위치를 찍으세요 (핀은 끌어서 옮길 수 있음)";
+  try { if (pickMk) pickMk.setMap(null); } catch (e) {}
+  if (!pickBound && map && typeof naver !== "undefined") { pickBound = true; naver.maps.Event.addListener(map, "click", (e) => { if (!$("#addp").hidden) setPick(e.coord.lat(), e.coord.lng()); }); }
+};
+$("#addCancel").onclick = endPick;
+$("#addGps").onclick = () => {
+  $("#addMsg").textContent = "";
+  try { navigator.geolocation.getCurrentPosition((p) => { setPick(p.coords.latitude, p.coords.longitude); try { map.setCenter(new naver.maps.LatLng(p.coords.latitude, p.coords.longitude)); } catch (e) {} }, () => { $("#addMsg").textContent = "내 위치를 못 가져왔습니다. 지도를 탭해 직접 찍으세요."; }, { enableHighAccuracy: true, timeout: 10000 }); } catch (e) { $("#addMsg").textContent = "내 위치를 못 가져왔습니다. 지도를 탭해 직접 찍으세요."; }
+};
+$("#addOk").onclick = () => {
   const n = $("#addN").value.trim(); if (!n) { $("#addMsg").textContent = "매장명을 입력하세요"; return; }
-  let c = null;
-  if ($("#addWhere").value === "gps") {
-    c = await new Promise((res) => { try { navigator.geolocation.getCurrentPosition((p) => res({ la: p.coords.latitude, lo: p.coords.longitude }), () => res(null), { enableHighAccuracy: true, timeout: 10000 }); } catch (e) { res(null); } });
-    if (!c) { $("#addMsg").textContent = "내 위치를 못 가져왔습니다. '지도 중앙'으로 바꿔 지도를 옮긴 뒤 추가하세요."; return; }
-  } else c = curCenter();
-  const d = addCustom({ n, la: c.la, lo: c.lo, z: $("#addZ").value }, true);
-  $("#addp").hidden = true; touch(d); refresh(); select(d.id, false);
+  if (!pickPos) { $("#addMsg").textContent = "지도에서 위치를 먼저 찍으세요"; return; }
+  const c = pickPos;
+  const d = addCustom({ n, la: c.la, lo: c.lo, z: zOf(null, c.la, c.lo) }, true);
+  endPick(); touch(d); refresh(); select(d.id, false);
   try { if (map && typeof naver !== "undefined") map.setCenter(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
 };
+
+// ===== 현장 추가 매장 수정/삭제 =====
+function rmLocal(k) {
+  const x = store.added.find((a) => (a.j + "|" + a.n) === k);
+  store.added = store.added.filter((a) => (a.j + "|" + a.n) !== k);
+  ["visited", "cls", "booth", "ts", "memos"].forEach((m) => { delete store[m][k]; });
+  store.removed[k] = store.removed[k] || { n: x ? x.n : k.split("|").slice(1).join("|"), j: k.slice(0, k.indexOf("|")), a: x ? AREAL[x.z] : "", ts: Date.now() };
+  save();
+}
+async function movePhotos(oldK, newK) {
+  try { const db = await idb(), all = await idbReq(db.transaction("p").objectStore("p").getAll());
+    for (const p of all) if (p.k === oldK) { p.k = newK; p.up = 0; await idbReq(db.transaction("p", "readwrite").objectStore("p").put(p)); } } catch (e) {}
+}
+function buildCustomTools(d, el) {
+  const box = document.createElement("div"); box.className = "ctools"; box.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;align-items:center";
+  const mkb = (t, f) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = f; return b; };
+  const home = () => { box.innerHTML = ""; box.append(mkb("이름 수정", ren), mkb("이 매장 삭제", del)); };
+  const ren = () => {
+    box.innerHTML = ""; const i = document.createElement("input"); i.type = "text"; i.value = d.n; i.style.cssText = "font-size:16px;padding:6px 8px;flex:1;min-width:140px";
+    const msg = document.createElement("span"); msg.style.cssText = "font-size:12px;color:#b42318";
+    box.append(i, mkb("저장", () => {
+      const n = i.value.trim(); if (!n) { msg.textContent = "이름을 입력하세요"; return; } if (n === d.n) { home(); return; }
+      const ok = d.j + "|" + d.n, nk = d.j + "|" + n; if (byKey(nk)) { msg.textContent = "같은 이름이 이미 있습니다"; return; }
+      ["visited", "cls", "booth", "ts", "memos"].forEach((m) => { if (store[m][ok] !== undefined) { store[m][nk] = store[m][ok]; delete store[m][ok]; } });
+      const a = store.added.find((x) => (x.j + "|" + x.n) === ok); if (a) a.n = n;
+      store.removed[ok] = { n: d.n, j: d.j, a: AREAL[d.z], ts: Date.now() }; delete store.removed[nk];
+      d.n = n; save(); syq[ok] = 1; movePhotos(ok, nk); touch(d); refresh(); select(d.id, false);
+    }), mkb("취소", home), msg);
+  };
+  const del = () => {
+    box.innerHTML = ""; const t = document.createElement("span"); t.textContent = "정말 삭제할까요? (파트너 폰에서도 사라집니다)"; t.style.cssText = "font-size:13px;color:#b42318";
+    box.append(t, mkb("삭제 확인", async () => { const k = skey(d); rmLocal(k); syq[k] = 1; syQSave(); try { await syFlush(); } catch (e) {} location.reload(); }), mkb("취소", home));
+  };
+  home(); const h = el.querySelector(".shb"); h.parentNode.insertBefore(box, h);
+}
+
+// ===== 지도 전체화면 =====
+function fsOn() { return $(".mapcard").classList.contains("fs"); }
+function fsSet(on) {
+  const mc = $(".mapcard"); mc.classList.toggle("fs", on); document.body.classList.toggle("fsb", on);
+  $("#fsbtn").textContent = on ? "전체화면 닫기" : "전체화면";
+  if (on) { try { const r = mc.requestFullscreen && mc.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+  else { try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} }
+  fsInfo();
+  [50, 300].forEach((t) => setTimeout(() => { try { window.dispatchEvent(new Event("resize")); } catch (e) {} }, t));
+}
+function fsInfo() {
+  const b = $("#fsbar"), d = selected != null ? DATA.find((x) => x.id === selected) : null;
+  if (d && fsOn()) { $("#fsname").textContent = d.n; b.classList.add("on"); } else b.classList.remove("on");
+}
+$("#fsbtn").onclick = () => fsSet(!fsOn());
+$("#fsdet").onclick = () => { fsSet(false); setTimeout(() => { try { $("#detail").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }, 200); };
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsOn()) fsSet(false); });
 
 // ===== 구글 시트 동기화 =====
 const SYK = "hongdae-imjang-sync-v1", SYQ = "hongdae-imjang-syncq-v1";
@@ -609,9 +716,11 @@ async function syFlush() {
   if (!syOn() || syBusy) return; syBusy = true;
   try {
     for (const k of Object.keys(syq)) {
+      const rm = store.removed[k];
+      if (rm) { await syPost({ action: "set", key: k, name: rm.n, addr: rm.j, area: rm.a || "", del: 1, ts: rm.ts }); delete syq[k]; syQSave(); continue; }
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
       const ts = store.ts[k] || Date.now();
-      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", memo: store.memo[k] || "", booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
+      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", memos: store.memos[k] || {}, booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
     }
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
@@ -619,50 +728,55 @@ async function syFlush() {
   } catch (e) { sySt("시트 저장 실패 (대기 " + Object.keys(syq).length + "건) · 연결되면 자동 재시도"); }
   finally { syBusy = false; if (syOn() && Object.keys(syq).length) { clearTimeout(syTimer); syTimer = setTimeout(syFlush, 1500); } }
 }
-let lastPull = 0;
+let lastPull = 0, rmNeedReload = false;
 async function syPull() {
   if (!syOn()) return; lastPull = Date.now();
   try {
     const j = await syPost({ action: "list" }); let ch = 0;
     j.rows.forEach((w) => {
+      if (store.removed[w.key]) return;
+      if (w.del) { if (store.removed[w.key]) return; const x = byKey(w.key); if (x && x.custom) { rmLocal(w.key); ch++; rmNeedReload = true; } return; }
       let d = byKey(w.key); if (!d && w.lat && w.lng && w.name) d = addCustom({ n: String(w.name), la: Number(w.lat), lo: Number(w.lng), j: String(w.key).slice(0, String(w.key).indexOf("|")), z: zOf(w.area, Number(w.lat), Number(w.lng)) }, false);
       if (!d || syq[w.key]) return;
+      if (w.memos) { ["이", "홍"].forEach((a) => { const m = w.memos[a]; if (!m) return; const mts = Number(m.ts) || 0; const loc = (store.memos[w.key] || {})[a]; if (mts > 0 && (!loc || mts > (loc.ts || 0))) { (store.memos[w.key] = store.memos[w.key] || {})[a] = { t: String(m.t || ""), ts: mts }; ch++; } }); }
       if ("booth" in w && !store.booth[w.key]) { const b0 = parseInt(w.booth, 10); if (b0 > 0) { store.booth[w.key] = b0; ch++; } }
       const ts = Number(w.ts) || 0; if (ts <= (store.ts[w.key] || 0)) return;
       const v = Number(w.visited) ? 1 : 0, c = CLSV[w.cls] || "";
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
       if (c) store.cls[w.key] = c; else delete store.cls[w.key];
-      if (w.memo !== "" && w.memo != null) store.memo[w.key] = String(w.memo); else delete store.memo[w.key];
       if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; }
       store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
-    if (ch) { save(); refresh(); const a = document.activeElement; if (!(a && a.id === "memo")) renderDetail(); }
+    if (rmNeedReload) { save(); location.reload(); return; }
+    if (ch) { save(); refresh(); const a = document.activeElement; if (!(a && a.tagName === "TEXTAREA")) renderDetail(); }
     return ch;
   } catch (e) { sySt("시트 불러오기 실패 (주소·비밀키·인터넷 확인)"); }
 }
 async function syAll() { if (!syOn()) { sySt("시트 미연결 (이 기기에만 저장)"); return; } sySt("동기화 중…"); await syFlush(); await syPull(); if (!Object.keys(syq).length && !/실패/.test($("#sySt").textContent)) sySt("시트 연결됨 · 동기화 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })); }
 $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
+document.querySelectorAll("#syWhoRow button").forEach((b) => { b.onclick = () => { setWho(b.dataset.w); renderDetail(); }; }); paintWho();
 $("#sySave").onclick = () => {
   sy = { url: $("#syUrl").value.trim(), token: $("#syTok").value.trim(), who: $("#syWho").value.trim() };
   try { localStorage.setItem(SYK, JSON.stringify(sy)); } catch (e) {}
-  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.memo), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
+  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.memos), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
   syAll();
 };
 $("#sySync").onclick = syAll;
-$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.memo), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
+$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.memos), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
 const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
-$("#syInv").onclick = async () => {
+const invite = () => async () => {
   if (!syOn()) { sySt("먼저 주소·비밀키를 저장·연결하세요"); return; }
   const link = location.origin + location.pathname + "#sync=" + enc({ u: sy.url, t: sy.token });
-  try { await navigator.clipboard.writeText(link); sySt("초대 링크를 복사했습니다. 파트너에게만 개인 대화로 보내세요."); }
+  try { await navigator.clipboard.writeText(link); sySt("초대 링크를 복사했습니다. 파트너에게만 개인 대화로 보내세요. 링크를 연 폰에서 '이/홍'을 한 번 고르면 됩니다."); }
   catch (e) { $("#syUrl").value = link; sySt("복사가 막혀 주소 칸에 링크를 표시했습니다. 길게 눌러 복사하세요(저장하지 마세요)."); }
 };
+$("#syInv").onclick = invite();
 (function () {
   const m = /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return;
   try {
     const o = dec(m[1]); if (o && o.u && o.t) {
-      sy = { url: String(o.u), token: String(o.t), who: sy.who || "파트너" };
+      sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : (sy.who === "이" || sy.who === "홍" ? sy.who : "") };
       localStorage.setItem(SYK, JSON.stringify(sy));
       $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
     }
