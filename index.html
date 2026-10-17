@@ -127,6 +127,11 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
   .rows { max-height: none; }
 }
 
+.addp{position:absolute;left:10px;right:10px;bottom:22px;z-index:8;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.3);display:grid;gap:8px}
+.addp input,.addp select{font-size:16px;padding:6px 8px;max-width:100%}
+.addp label{font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.addp .msg{font-size:12px;color:#b42318}
+.addp .btns{display:flex;gap:8px}
 .detail .shb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0}
 .detail .shb .lab{font-size:12px;color:var(--muted)}
 .detail .shb button{min-width:38px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:6px 12px;font-size:15px;cursor:pointer}
@@ -193,7 +198,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도</h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-a</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -234,8 +239,17 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
         </div>
         </div>
         <button id="locbtn" class="lgbtn" type="button">내 위치</button>
+        <button id="addbtn" class="lgbtn" type="button">＋ 매장 추가</button>
       </div>
-            <div class="viewer" id="viewer" hidden></div>
+            <div class="addp" id="addp" hidden>
+        <b>현장에서 매장 추가</b>
+        <input id="addN" type="text" placeholder="매장명 (예: 포토OO 연남점)">
+        <label>위치 <select id="addWhere"><option value="gps">내 위치(GPS)</option><option value="center">지도 중앙(십자 위치)</option></select></label>
+        <label>권역 <select id="addZ"></select></label>
+        <div id="addMsg" class="msg"></div>
+        <div class="btns"><button type="button" class="lgbtn" id="addOk">추가</button><button type="button" class="lgbtn" id="addCancel">취소</button></div>
+      </div>
+      <div class="viewer" id="viewer" hidden></div>
     </div>
     <div class="side">
       <div class="panel filters">
@@ -254,12 +268,12 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
           <input id="syUrl" type="url" placeholder="웹앱 주소 (https://script.google.com/.../exec)" style="font-size:16px;padding:6px 8px">
           <input id="syTok" type="password" placeholder="비밀키" autocomplete="off" style="font-size:16px;padding:6px 8px">
           <input id="syWho" type="text" placeholder="내 이름 (예: 나 / 파트너)" style="font-size:16px;padding:6px 8px">
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lgbtn" id="sySave">저장·연결</button><button type="button" class="lgbtn" id="sySync">지금 동기화</button><button type="button" class="lgbtn" id="syInv">초대 링크 복사</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lgbtn" id="sySave">저장·연결</button><button type="button" class="lgbtn" id="sySync">지금 동기화</button><button type="button" class="lgbtn" id="syInv">초대 링크 복사</button><button type="button" class="lgbtn" id="syRe">내 기록 전부 다시 보내기</button></div>
           <div id="sySt" style="font-size:12px;color:var(--muted)"></div>
         </div></details>
       <details class="panel" id="cmp"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">권역별 매출 비교 (오픈업 상한+400만원)</summary><div id="cmpbox" style="overflow-x:auto;margin-top:8px"></div><div style="color:var(--muted);font-size:12px;margin-top:6px">매출 없는 매장은 제외하고 계산. 기준월이 권역마다 달라 참고용입니다.</div></details>
       <div class="foot"><span>오픈업 매출은 추정 구간이며 기준월이 지역마다 다릅니다(홍대·북촌·혜화·익선·을지로 8월, 이태원·용산 7월, 성수 6월 등).</span><span>방문 체크·메모·사진은 이 기기의 브라우저에만 저장됩니다(브라우저 데이터를 지우면 사라짐). 사진은 사진 화면의 "저장"으로 꺼낼 수 있습니다.</span>
-        <button type="button" class="lgbtn" id="expbtn" style="justify-self:start">메모·방문 기록 내보내기</button></div>
+        <button type="button" class="lgbtn" id="expbtn" style="justify-self:start">메모·방문 기록 내보내기</button><button type="button" class="lgbtn" id="cpbtn" style="justify-self:start">기록 복사하기 (파일 저장이 안 될 때)</button><textarea id="cpbox" readonly rows="6" hidden style="width:100%;font-size:12px;box-sizing:border-box"></textarea><div id="cpmsg" style="font-size:12px;color:var(--muted)"></div></div>
     </div>
   </div>
 </div>
@@ -281,6 +295,9 @@ try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(sto
 function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 const skey = (d) => d.j + "|" + d.n;
 store.cls = store.cls || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
+store.added = store.added || [];
+function mkCustom(a) { return { z: a.z, n: a.n, j: a.j, r: "(현장 추가)", la: a.la, lo: a.lo, s: "none", on: null, orr: null, mo: null, rev: null, hi: null, id: DATA.length, custom: 1 }; }
+store.added.forEach((a) => DATA.push(mkCustom(a)));
 const seen = {};
 DATA.forEach((d) => {
   const k = d.la.toFixed(5) + "," + d.lo.toFixed(5), n = seen[k] = (seen[k] || 0) + 1;
@@ -375,7 +392,7 @@ function openViewer(d, p, after) {
   bar.append(save1, del, x); v.append(im, bar); v.onclick = (e) => { if (e.target === v) close(); };
 }
 function exportNotes() {
-  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 부스수: store.booth, 오픈업분류: store.cls };
+  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 부스수: store.booth, 추가매장: store.added, 오픈업분류: store.cls };
   const u = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
   const a = document.createElement("a"); a.href = u; a.download = "임장기록_" + new Date().toISOString().slice(0, 10) + ".json"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000);
 }
@@ -421,7 +438,7 @@ function renderDetail() {
   el.querySelector("h2").textContent = d.n;
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
-  add(AREAL[d.z]); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(d.s === "none" ? noneFull(d) : ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
+  add(AREAL[d.z]); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); add(d.s === "none" ? noneFull(d) : ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
   row("지번", d.j); row("도로명", d.r);
@@ -511,9 +528,54 @@ function refresh() {
 $("#sort").onchange = () => { if ($("#sort").value === "near" && !me) locate(); renderList(); };
 $("#locbtn").onclick = locate;
 $("#expbtn").onclick = exportNotes;
+$("#cpbtn").onclick = async () => {
+  const data = { 내보낸날: new Date().toISOString(), 방문: store.visited, 메모: store.memo, 부스수: store.booth, 추가매장: store.added, 오픈업분류: store.cls };
+  const t = JSON.stringify(data), box = $("#cpbox"), msg = $("#cpmsg");
+  box.value = t; box.hidden = false; box.focus(); box.select();
+  try { await navigator.clipboard.writeText(t); msg.textContent = "복사됐습니다. 카톡 대화창에 붙여넣어 보내세요."; }
+  catch (e) { try { document.execCommand("copy"); msg.textContent = "복사됐습니다. 카톡 대화창에 붙여넣어 보내세요."; } catch (e2) { msg.textContent = "위 글상자를 길게 눌러 '전체 선택 → 복사'한 뒤 카톡에 붙여넣으세요."; } }
+};
 $("#lgbtn").onclick = () => { const lg = $("#legend"); lg.hidden = !lg.hidden; $("#lgbtn").textContent = lg.hidden ? "범례 ▸" : "범례 ▾"; $("#lgbtn").setAttribute("aria-expanded", String(!lg.hidden)); };
 if (window.innerWidth > 920) $("#lgbtn").click();
 window.navermap_authFailure = () => { $("#err").style.display = "grid"; };
+
+
+// ===== 현장 매장 추가 =====
+function zOf(label, la, lo) {
+  const z = Object.keys(AREAL).find((k) => AREAL[k] === label); if (z) return z;
+  let best = null, bd = 1e12; DATA.forEach((d) => { if (d.custom) return; const x = hav(la, lo, d.la, d.lo); if (x < bd) { bd = x; best = d.z; } }); return best || "?";
+}
+function addCustom(a, local) {
+  a.j = a.j || ("현장추가 " + a.la.toFixed(5) + "," + a.lo.toFixed(5));
+  if (byKey(a.j + "|" + a.n)) return byKey(a.j + "|" + a.n);
+  store.added.push(a); save();
+  const d = mkCustom(a); DATA.push(d);
+  d.mla = d.la; d.mlo = d.lo; d.vis = !!store.visited[skey(d)]; d.cls = store.cls[skey(d)] || "";
+  if (typeof naver !== "undefined" && map) {
+    const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.mla, d.mlo), icon: { content: iconHtml(d), anchor: new naver.maps.Point(0, 0) }, zIndex: 10 });
+    naver.maps.Event.addListener(m, "click", () => select(d.id, false)); markers[d.id] = m;
+  }
+  if (!local) refresh();
+  return d;
+}
+function buildAddForm() {
+  const sel = $("#addZ"); sel.innerHTML = ""; AREAS.forEach(([z, label]) => { const o = document.createElement("option"); o.value = z; o.textContent = label; sel.appendChild(o); });
+}
+function curCenter() { try { if (map) { const c = map.getCenter(); return { la: c.lat(), lo: c.lng() }; } } catch (e) {} return me || { la: 37.5565, lo: 126.9215 }; }
+$("#addbtn").onclick = () => { buildAddForm(); const c = (me && $("#addWhere").value === "gps") ? me : curCenter(); $("#addZ").value = zOf(null, c.la, c.lo); $("#addp").hidden = false; $("#addN").value = ""; $("#addMsg").textContent = ""; setTimeout(() => $("#addN").focus(), 50); };
+$("#addCancel").onclick = () => { $("#addp").hidden = true; };
+$("#addWhere").onchange = () => { if ($("#addWhere").value === "gps" && !me) locate(); };
+$("#addOk").onclick = async () => {
+  const n = $("#addN").value.trim(); if (!n) { $("#addMsg").textContent = "매장명을 입력하세요"; return; }
+  let c = null;
+  if ($("#addWhere").value === "gps") {
+    c = await new Promise((res) => { try { navigator.geolocation.getCurrentPosition((p) => res({ la: p.coords.latitude, lo: p.coords.longitude }), () => res(null), { enableHighAccuracy: true, timeout: 10000 }); } catch (e) { res(null); } });
+    if (!c) { $("#addMsg").textContent = "내 위치를 못 가져왔습니다. '지도 중앙'으로 바꿔 지도를 옮긴 뒤 추가하세요."; return; }
+  } else c = curCenter();
+  const d = addCustom({ n, la: c.la, lo: c.lo, z: $("#addZ").value }, true);
+  $("#addp").hidden = true; touch(d); refresh(); select(d.id, false);
+  try { if (map && typeof naver !== "undefined") map.setCenter(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
+};
 
 // ===== 구글 시트 동기화 =====
 const SYK = "hongdae-imjang-sync-v1", SYQ = "hongdae-imjang-syncq-v1";
@@ -549,7 +611,7 @@ async function syFlush() {
     for (const k of Object.keys(syq)) {
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
       const ts = store.ts[k] || Date.now();
-      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", memo: store.memo[k] || "", booth: store.booth[k] || "", ts });
+      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", memo: store.memo[k] || "", booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
     }
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
@@ -563,13 +625,14 @@ async function syPull() {
   try {
     const j = await syPost({ action: "list" }); let ch = 0;
     j.rows.forEach((w) => {
-      const d = byKey(w.key); if (!d || syq[w.key]) return;
+      let d = byKey(w.key); if (!d && w.lat && w.lng && w.name) d = addCustom({ n: String(w.name), la: Number(w.lat), lo: Number(w.lng), j: String(w.key).slice(0, String(w.key).indexOf("|")), z: zOf(w.area, Number(w.lat), Number(w.lng)) }, false);
+      if (!d || syq[w.key]) return;
       const ts = Number(w.ts) || 0; if (ts <= (store.ts[w.key] || 0)) return;
       const v = Number(w.visited) ? 1 : 0, c = CLSV[w.cls] || "";
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
       if (c) store.cls[w.key] = c; else delete store.cls[w.key];
       if (w.memo !== "" && w.memo != null) store.memo[w.key] = String(w.memo); else delete store.memo[w.key];
-      if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; else delete store.booth[w.key]; }
+      if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; }
       store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
     if (ch) { save(); refresh(); const a = document.activeElement; if (!(a && a.id === "memo")) renderDetail(); }
@@ -585,6 +648,7 @@ $("#sySave").onclick = () => {
   syAll();
 };
 $("#sySync").onclick = syAll;
+$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.memo), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
 const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
 $("#syInv").onclick = async () => {
