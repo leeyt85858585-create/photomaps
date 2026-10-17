@@ -216,7 +216,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-o</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-p</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -753,6 +753,12 @@ async function geocodeL(l) {
   if (l.la && l.lo) return true;
   const p = LPOS[l.addr]; if (p) { l.la = p[0]; l.lo = p[1]; return true; }
   const g = geo[l.addr]; if (g) { l.la = g[0]; l.lo = g[1]; return true; }
+  if (typeof naver !== "undefined" && naver.maps.Service) {
+    for (const c of [l.road, l.addr].filter(Boolean)) {
+      const hit = await new Promise((res) => { try { naver.maps.Service.geocode({ query: c }, (st, rs) => { const a = st === naver.maps.Service.Status.OK && rs.v2 && rs.v2.addresses && rs.v2.addresses[0]; res(a ? [Number(a.y), Number(a.x)] : null); }); } catch (e) { res(null); } setTimeout(() => res(null), 4000); });
+      if (hit) { l.la = hit[0]; l.lo = hit[1]; geo[l.addr] = hit; try { localStorage.setItem(GEOK, JSON.stringify(geo)); } catch (e) {} return true; }
+    }
+  }
   const cands = [l.road, (l.addr.match(/[가-힣0-9]+(로|길)\s?\d*(번?길)?\s?\d+(-\d+)?/) || [])[0], l.addr].filter(Boolean);
   for (const c of cands) {
     try {
@@ -931,7 +937,7 @@ refresh(); renderDetail(); buildCmp();
 function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid"; } try { loadListings(true); } catch (e) {} }
 const CID = "lqh247mo03";
 const sc = document.createElement("script");
-sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID;
+sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID + "&submodules=geocoder";
 sc.onload = boot; sc.onerror = () => { $("#err").style.display = "grid"; };
 document.head.appendChild(sc);
 </script></body></html>
