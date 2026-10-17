@@ -174,6 +174,8 @@ body.fsb{overflow:hidden}
 .lrow .bd{background:#f59e0b;color:#1b1300;font-weight:700;font-size:11px;border-radius:5px;padding:2px 6px}
 .lrow .sub{color:var(--muted);font-size:12px}
 .lrow[aria-current="true"]{background:color-mix(in srgb,#f59e0b 14%,transparent)}
+.mk.closed{opacity:.45}
+.mk.closed .l{text-decoration:line-through}
 .mk{position:relative;width:0;height:0}
 .mk .d{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);box-sizing:border-box}
 .mk.none .d{background:transparent;border:3px solid #3f4d58;box-shadow:0 0 0 1px rgba(255,255,255,.9)}
@@ -234,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-z</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-A</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -333,8 +335,8 @@ const $ = (s) => document.querySelector(s);
 const fmt = (n) => n.toLocaleString("ko-KR");
 const TC = ["#cfe4ec","#95c4d4","#4f9fb9","#1f6f8f","#0a3d58"];
 const SKEY = "hongdae-imjang-v1";
-const noneLabel = (d) => d.cls === "reg" ? "미등록" : d.cls === "hid" ? "매출 비공개" : "오픈업 미확인";
-const noneFull = (d) => d.cls === "reg" ? "오픈업 미등록 (검색 안 됨)" : d.cls === "hid" ? "매출 비공개 (점주 요청)" : "오픈업 미확인 (미등록·비공개 구분 전)";
+const noneLabel = (d) => d.cls === "closed" ? "폐업" : d.cls === "reg" ? "미등록" : d.cls === "hid" ? "매출 비공개" : "오픈업 미확인";
+const noneFull = (d) => d.cls === "closed" ? "폐업 (현장 확인)" : d.cls === "reg" ? "오픈업 미등록 (검색 안 됨)" : d.cls === "hid" ? "매출 비공개 (점주 요청)" : "오픈업 미확인 (미등록·비공개 구분 전)";
 const isOld = (d) => d.mo && d.mo !== "8월";
 let store = { visited: {}, memo: {}, cls: {} };
 try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
@@ -485,7 +487,7 @@ function renderList() {
     { const z = b.querySelector(".zdot"); if (d.hi == null) { z.style.background = "transparent"; z.style.border = "2px dashed #8b97a1"; } else { const t = Math.pow(Math.min(1, (d.hi + 400) / 5000), 0.75); z.style.background = "color-mix(in srgb, #c62828 " + Math.round(t * 100) + "%, #ffffff)"; z.style.border = "1px solid rgba(198,40,40,.45)"; } }
     b.querySelector(".nm").textContent = d.n + (d.vis ? "  ✓" : "");
     b.querySelector(".rd").textContent = AREAL[d.z] + " · " + (d.r || "현장 추가") + (d.dist != null ? " · " + fmtDist(d.dist) : "");
-    const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na");
+    const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.cls === "closed" ? "폐업 · " : "") + (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na");
     b.onclick = () => select(d.id, true); box.appendChild(b);
   });
   if (!rows.length) box.innerHTML = '<div class="empty" style="padding:12px">조건에 맞는 매장이 없습니다.</div>';
@@ -503,7 +505,7 @@ function renderDetail() {
   el.querySelector("h2").textContent = d.n;
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
-  add(AREAL[d.z]); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); if (d.s !== "none") add(ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
+  add(AREAL[d.z]); if (d.cls === "closed") add("폐업", "warn"); if (d.custom) add("현장 추가", "warn"); if (d.hi != null && isOld(d)) add("기준월 " + d.mo, "warn"); if (d.s !== "none") add(ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
   if (d.custom && /^현장추가 /.test(d.j) && !d.r) {
@@ -532,6 +534,11 @@ function renderDetail() {
   const chk = $("#vchk"); chk.checked = d.vis;
   chk.onchange = () => setVis(d, chk.checked);
   buildMemos(d, k);
+  { const w = document.createElement("label"); w.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px";
+    const c = document.createElement("input"); c.type = "checkbox"; c.checked = d.cls === "closed"; c.style.cssText = "width:20px;height:20px";
+    c.onchange = () => setCls(d, c.checked ? "closed" : ((typeof OC !== "undefined" && OC[k]) || ""));
+    const t = document.createElement("span"); t.innerHTML = "폐업 확인 <span style='font-size:12px;color:var(--muted)'>(체크하면 자동 수집·평균에서 제외)</span>";
+    w.append(c, t); el.appendChild(w); }
 }
 function whoNow() { try { return sy.who === "이" || sy.who === "홍" ? sy.who : ""; } catch (e) { return ""; } }
 function fmtTs(ts) { return ts > 1e12 ? new Date(ts).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""; }
@@ -579,7 +586,7 @@ function buildMemos(d, k) {
 }
 
 function buildCmp() {
-  const g = {}; DATA.forEach((d) => { const a = AREAL[d.z]; const o = g[a] || (g[a] = { n: 0, v: [] }); o.n++; if (d.hi != null) o.v.push(d.hi + 400); });
+  const g = {}; DATA.forEach((d) => { const a = AREAL[d.z]; const o = g[a] || (g[a] = { n: 0, v: [] }); o.n++; if (d.hi != null && d.cls !== "closed") o.v.push(d.hi + 400); });
   const med = (v) => { const a = [...v].sort((x, y) => x - y), m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
   const rows = Object.entries(g).map(([a, o]) => ({ a, n: o.n, k: o.v.length, m: o.v.length ? med(o.v) : null, p: o.v.length ? o.v.reduce((x, y) => x + y, 0) / o.v.length : null, h: o.v.filter((x) => x >= 3000).length })).sort((x, y) => (y.p ?? -1) - (x.p ?? -1));
   let h = '<table style="border-collapse:collapse;font-size:12px;white-space:nowrap"><tr><th align=left>권역</th><th>매출확인/전체</th><th>평균</th><th>중앙값</th><th>3천↑</th></tr>';
@@ -596,7 +603,7 @@ function select(id, fromList) {
 }
 function iconHtml(d) {
   const t = tier(d.hi), c = ["mk"];
-  if (t < 0) c.push("none"); if (d.s === "diff") c.push("diff"); if (d.vis) c.push("vis"); if (d.s === "ou") c.push("ouonly"); if (selected === d.id) c.push("sel");
+  if (t < 0) c.push("none"); if (d.s === "diff") c.push("diff"); if (d.vis) c.push("vis"); if (d.s === "ou") c.push("ouonly"); if (d.cls === "closed") c.push("closed"); if (selected === d.id) c.push("sel");
   const bg = t < 0 ? "" : ' style="background:' + TC[t] + '"';
   const nm = d.n.replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return '<div class="' + c.join(" ") + '"><div class="d"' + bg + '></div><span class="l">' + nm + '</span></div>';
@@ -612,7 +619,7 @@ function hull(pts) {
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: false });
   const TIER = [[1000, "#f6e3a8"], [2000, "#f2c58e"], [3000, "#e9a07c"], [5000, "#d97b66"], [1e9, "#b5524a"]];
-  const statOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return { avg: v.reduce((a, b) => a + b, 0) / v.length, med: v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2 }; };
+  const statOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null && d.cls !== "closed").map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return { avg: v.reduce((a, b) => a + b, 0) / v.length, med: v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2 }; };
   AREAS.forEach(([z, label, col0]) => {
     const st = statOf(z), md = st ? st.avg : null, col = md == null ? "#6f7e8a" : TIER.find(t => md < t[0])[1];
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
@@ -905,7 +912,7 @@ function inZone(z, la, lo) {
   return ins;
 }
 function zStats(z) {
-  const m = DATA.filter((d) => inZone(z, d.la, d.lo)), v = m.filter((d) => d.hi != null).map((d) => d.hi + 400).sort((a, b) => a - b);
+  const m = DATA.filter((d) => inZone(z, d.la, d.lo)), v = m.filter((d) => d.hi != null && d.cls !== "closed").map((d) => d.hi + 400).sort((a, b) => a - b);
   let avg = null, med = null;
   if (v.length) { avg = v.reduce((a, b) => a + b, 0) / v.length; const h = v.length >> 1; med = v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2; }
   return { m, v, avg, med, max: v.length ? v[v.length - 1] : null, min: v.length ? v[0] : null };
@@ -989,7 +996,7 @@ let sy = { url: "", token: "", who: "" }; try { Object.assign(sy, JSON.parse(loc
 let syq = {}; try { syq = JSON.parse(localStorage.getItem(SYQ) || "{}"); } catch (e) {}
 const syOn = () => !!(sy.url && sy.token);
 if (store.migq && store.migq.length) { store.migq.forEach((k) => { if (!store.ts[k]) store.ts[k] = 1; syq[k] = 1; }); store.migq = []; save(); try { localStorage.setItem(SYQ, JSON.stringify(syq)); } catch (e) {} setTimeout(() => { if (syOn()) syFlush(); }, 2500); }
-const CLSK = { reg: "미등록", hid: "매출 비공개" }, CLSV = { "미등록": "reg", "매출 비공개": "hid" };
+const CLSK = { reg: "미등록", hid: "매출 비공개", closed: "폐업" }, CLSV = { "미등록": "reg", "매출 비공개": "hid", "폐업": "closed" };
 // 오픈업 자동 확인 결과(26.10.17): 미등록/매출 비공개. Claude가 관리하며 이 값이 기준(시트 값과 다르면 이 값으로 갱신).
 const OC = {"마포구 동교동 148-4 지층|아날로그 연남점":"reg","마포구 동교동 150-19 1층|포토그레이 연남점":"reg","마포구 동교동 152-1 1층 오토포토|오토포토 연남":"reg","마포구 연남동 224-60 1층 sticka|스티카 연남점":"reg","마포구 연남동 227-16|돈룩업 연남":"hid","마포구 연남동 228-45 1층|코드 by 포토시그니처 연남점":"hid","마포구 연남동 258-1|얼짱스티커사진":"reg","마포구 연남동 259-9 1층|포토그레이 연남 3호점":"reg","마포구 연남동 260-11 2층|비메모리 연남본점":"hid","서대문구 연희동 128-10|부스바이모노맨션 1102":"reg","마포구 서교동 335-4 2층 202호|레토 빈티지 포토부스":"reg","마포구 서교동 347-24|포토이즘 박스 서울 홍대역점":"reg","마포구 서교동 358-114 1층|포토그레이 홍대 2호점":"reg","마포구 서교동 358-124 1층|포토하라 홍대점":"reg","마포구 서교동 358-125 1층|BYTP 와우산로":"reg","마포구 서교동 364-21 1층|언프레임 홍대레드로드점":"hid","마포구 서교동 364-21 1층|덥티 홍대상상마당점":"hid","마포구 서교동 365-10|홍대네컷 홍대2호점":"reg","마포구 서교동 365-19|홍대네컷 홍대3호점":"reg","마포구 상수동 317-8 103호|아우라픽 상수점":"reg","마포구 서교동 398-16|부스바이모노맨션 1114":"reg","마포구 서교동 401-16 1층 EXIT|엑시트 합정점":"reg","마포구 서교동 403-15 1층|RGB PHOTO STUDIO 상수점":"reg","마포구 서교동 408-12 1층 포토랩플러스 홍대2호점|포토랩플러스 홍대2호점":"reg","마포구 서교동 408-31 1층 1호|포토오브제 홍대상수점":"hid","마포구 서교동 411-16 선우빌딩 일층 홍대네컷|홍대네컷 상수점":"reg","마포구 합정동 413-2 1층|더필름 합정점":"hid","마포구 합정동 413-4 1층|포토그레이 합정점":"reg","마포구 합정동 414-16|돈룩업 합정":"reg","용산구 이태원동 129-2 2층|홍대네컷 이태원점":"reg","용산구 이태원동 128-9 1층|포토그레이 이태원점":"reg","서대문구 대현동 34-29|petfany":"reg","서대문구 대현동 33-15 1층|더필름 이대점":"hid","서대문구 대현동 60-9 1층|포토이즘박스 이대점":"reg","중구 을지로3가 320-29 1층|모드빈티크 을지로":"hid","종로구 화동 138-18 1층|포토그레이 삼청동점":"reg","종로구 화동 99 1층|선비넉장":"hid","종로구 소격동 18 1층 인생네컷|인생네컷 삼청점":"hid","종로구 사간동 119-1|SHUTTER K":"reg","종로구 관훈동 38 3층|포토콤마 인사동쌈지길점":"reg","종로구 관훈동 155-2 3층|인생네컷 안녕인사동점":"reg","종로구 체부동 38 1층|스튜디오모토 서촌점":"hid","종로구 누하동 77-4 1층|포토콤마 서촌점":"reg","종로구 체부동 23-1|포토그레이 서울서촌점":"reg","종로구 적선동 11 1층|가로필름 경복궁점":"reg","종로구 통인동 141-2 1층 오토포토|오토포토 서촌":"reg","종로구 체부동 17 1층|덥티 서촌점":"reg","종로구 체부동 27|포토이즘박스 서촌점":"hid","종로구 동숭동 1-135 1층|비룸스튜디오 혜화대학로점":"reg","종로구 동숭동 1-85|혜화네컷":"reg","종로구 동숭동 1-61 송은빌딩 1층 103호|츄스티커사진 대학로점":"hid","종로구 명륜4가 54-1|포토그레이 대학로점":"reg","종로구 명륜4가 53 1층|모드빈티크 대학로":"hid","종로구 익선동 126-3 1층|포토랩플러스 라이브러리 익선점":"reg","종로구 권농동 191-3|캠백 서순라길":"reg","종로구 익선동 161-1|익선네컷 셀프사진관":"reg","종로구 익선동 166-64|포토그레이 익선동점":"reg","종로구 낙원동 119 1층|모노맨션 익선점":"reg","종로구 관철동 13-13 1층 포토시그니처 종각점|포토시그니처 종각점":"hid","종로구 관철동 14-10 1층|포토그레이 종각점":"reg","성동구 성수동1가 685-704 A11|치즈문포토":"reg","성동구 성수동1가 685-704 언더스탠드에비뉴 A동 11호|미소포토부스 서울숲":"reg","성동구 성수동1가 668-134 지하1층|포토시그니처 서울숲점":"reg","성동구 성수동1가 668-134|포토그레이 서울숲점":"reg","성동구 성수동1가 668-49 1층 하루필름|하루필름 서울숲점":"reg","중구 을지로3가 296-14 1층 픽닷 을지로점|픽닷 을지로점":"hid","중구 을지로3가 320-3 1층|포토이즘박스 을지로점":"hid","중구 초동 110|포토시그니처 힙지로점":"reg","용산구 한강로1가 214 1층|포토그레이 용리단길점":"reg","용산구 한강로2가 49-3|포토랩플러스 라이브러리 용리단길점":"reg","용산구 한강로2가 98-2|돈룩업 용리단길":"hid","용산구 한강로3가 40-999 3층|인생네컷 용산아이파크몰점":"reg","용산구 용산동2가 1-499 1층|모드빈티크 해방촌":"hid","용산구 용산동2가 1-52 1층 autofoto|오토포토 신흥":"reg"};
 store.ocDone = store.ocDone || {}; let ocApplied = false;
@@ -997,6 +1004,7 @@ function applyOC() {
   if (ocApplied) return; ocApplied = true; let n = 0;
   for (const k in OC) {
     const d = byKey(k); if (!d) continue;
+    if (store.cls[k] === "closed") continue;
     if (store.cls[k] !== OC[k]) { store.cls[k] = OC[k]; d.cls = OC[k]; store.ts[k] = Date.now(); syq[k] = 1; n++; }
   }
   save(); syQSave();
