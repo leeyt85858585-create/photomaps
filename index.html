@@ -225,7 +225,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-u</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-v</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -679,7 +679,9 @@ let revErr = "";
 function revAddr(la, lo) {
   return new Promise((res) => {
     revErr = "";
-    if (typeof naver === "undefined" || !naver.maps || !naver.maps.Service) { revErr = "주소 모듈 미로드"; res(""); return; }
+    let w = 0;
+    const run = () => {
+    if (typeof naver === "undefined" || !naver.maps || !naver.maps.Service) { if (w++ < 20) { setTimeout(run, 300); return; } revErr = "주소 모듈 미로드"; res(""); return; }
     const t = setTimeout(() => { revErr = "응답 없음(4초)"; res(""); }, 4000);
     try {
       naver.maps.Service.reverseGeocode({ coords: new naver.maps.LatLng(la, lo), orders: "roadaddr,addr" }, (st, rs) => {
@@ -697,6 +699,8 @@ function revAddr(la, lo) {
         } catch (e) { revErr = revErr || ("오류 " + e.message); res(""); }
       });
     } catch (e) { clearTimeout(t); revErr = "오류 " + e.message; res(""); }
+    };
+    run();
   });
 }
 function setPick(la, lo) {
@@ -1101,6 +1105,6 @@ function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid
 const CID = "lqh247mo03";
 const sc = document.createElement("script");
 sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID + "&submodules=geocoder";
-sc.onload = boot; sc.onerror = () => { $("#err").style.display = "grid"; };
+sc.onload = () => { let done = false; const go = () => { if (!done) { done = true; boot(); } }; try { if (naver.maps.Service) go(); else { naver.maps.onJSContentLoaded = go; setTimeout(go, 5000); } } catch (e) { go(); } }; sc.onerror = () => { $("#err").style.display = "grid"; };
 document.head.appendChild(sc);
 </script></body></html>
