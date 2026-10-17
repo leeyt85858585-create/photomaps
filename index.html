@@ -236,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-A</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-B</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -414,7 +414,13 @@ const revText = (d) => d.hi == null ? "—" : d.rev.replace(/(\d+)/g, (m) => fmt
 let me = null, meMarker = null;
 const hav = (a, b, c, d) => { const R = 6371000, t = Math.PI / 180, x = (c - a) * t, y = (d - b) * t, u = Math.sin(x / 2) ** 2 + Math.cos(a * t) * Math.cos(c * t) * Math.sin(y / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(u)); };
 const fmtDist = (m) => m < 1000 ? Math.round(m / 10) * 10 + "m" : (m / 1000).toFixed(1) + "km";
-function setVis(d, v) { d.vis = v; const k = skey(d); if (v) store.visited[k] = 1; else delete store.visited[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
+const isPhone = () => { try { return !!((navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)); } catch (e) { return false; } };
+const pad2 = (n) => String(n).padStart(2, "0");
+function vtNow() { const t = new Date(); return t.getFullYear() + "-" + pad2(t.getMonth() + 1) + "-" + pad2(t.getDate()) + " " + pad2(t.getHours()) + ":" + pad2(t.getMinutes()); }
+// 방문일시: 폰에서 처음 '방문했음'을 누르거나 메모를 남긴 시각만 기록(PC 작업은 기록 안 함). 가장 이른 값 유지.
+function vtBetter(a, b) { if (!a) return b; if (!b) return a; if (a.slice(0, 10) !== b.slice(0, 10)) return a < b ? a : b; if (a.length !== b.length) return a.length > b.length ? a : b; return a < b ? a : b; }
+function vtMark(k) { if (!isPhone()) return; store.vt = store.vt || {}; const n = vtBetter(store.vt[k], vtNow()); if (n !== store.vt[k]) store.vt[k] = n; }
+function setVis(d, v) { d.vis = v; const k = skey(d); if (v) { store.visited[k] = 1; vtMark(k); } else delete store.visited[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
 let boothOther = null;
 function setBooth(d, v) { const k = skey(d); if (v) store.booth[k] = v; else delete store.booth[k]; save(); touch(d); renderDetail(); }
 function setCls(d, v) { d.cls = v; const k = skey(d); if (v) store.cls[k] = v; else delete store.cls[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
@@ -533,6 +539,7 @@ function renderDetail() {
   if (other) { const i = document.createElement("input"); i.type = "number"; i.inputMode = "numeric"; i.min = 9; i.placeholder = "직접 입력"; i.value = bv; i.className = "boothin"; i.onchange = () => { const n = parseInt(i.value, 10); setBooth(d, n > 0 ? n : 0); }; bx.appendChild(i); const u = document.createElement("span"); u.className = "lab"; u.textContent = "개"; bx.appendChild(u); }
   const chk = $("#vchk"); chk.checked = d.vis;
   chk.onchange = () => setVis(d, chk.checked);
+  { const vt = (store.vt || {})[k]; if (vt || d.vis) { const sp = chk.nextElementSibling; sp.textContent = "방문했음" + (vt ? " · " + vt.replace(/^\d{4}-/, "").replace(/ 00:00$/, "") : ""); if (vt && vt.length === 10) sp.textContent += " (시각 미확인)"; } }
   buildMemos(d, k);
   { const w = document.createElement("label"); w.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px";
     const c = document.createElement("input"); c.type = "checkbox"; c.checked = d.cls === "closed"; c.style.cssText = "width:20px;height:20px";
@@ -560,7 +567,7 @@ function buildMemos(d, k) {
   const sv = mkEl("button", "margin-top:6px", "메모 저장"); sv.type = "button"; sv.className = "lgbtn";
   sv.onclick = () => {
     const t = ta.value.trim(); if (!t) return;
-    const now = Date.now(); (store.notes[k] = store.notes[k] || []).push({ id: me + "-" + now + "-" + Math.random().toString(36).slice(2, 6), w: me, t, c: now, ts: now, del: 0 });
+    vtMark(k); const now = Date.now(); (store.notes[k] = store.notes[k] || []).push({ id: me + "-" + now + "-" + Math.random().toString(36).slice(2, 6), w: me, t, c: now, ts: now, del: 0 });
     delete store.draft[k]; save(); touch(d); renderDetail();
   };
   box.append(lab, ta, sv);
@@ -1041,7 +1048,7 @@ async function syFlush() {
       if (rm) { await syPost({ action: "set", key: k, name: rm.n, addr: rm.j, area: rm.a || "", del: 1, ts: rm.ts }); delete syq[k]; syQSave(); continue; }
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
       const ts = store.ts[k] || Date.now();
-      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, cls: CLSK[d.cls] || "", notes: store.notes[k] || [], booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
+      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, vt: (store.vt || {})[k] || "", dev: isPhone() ? "폰" : "PC", cls: CLSK[d.cls] || "", notes: store.notes[k] || [], booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
     }
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
@@ -1061,6 +1068,7 @@ async function syPull() {
       if (!d || syq[w.key]) return;
       { let nc = 0; if (Array.isArray(w.notes)) nc = mergeNotes(w.key, w.notes); else if (w.memos) nc = legacyNotes(w.key, w.memos); if (nc) ch++; }
       if ("booth" in w && !store.booth[w.key]) { const b0 = parseInt(w.booth, 10); if (b0 > 0) { store.booth[w.key] = b0; ch++; } }
+      if (w.vt) { store.vt = store.vt || {}; const n0 = vtBetter(store.vt[w.key], String(w.vt)); if (n0 !== store.vt[w.key]) { store.vt[w.key] = n0; ch++; } }
       const ts = Number(w.ts) || 0; if (ts <= (store.ts[w.key] || 0)) return;
       const v = Number(w.visited) ? 1 : 0, c = CLSV[w.cls] || "";
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
@@ -1068,6 +1076,7 @@ async function syPull() {
       if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; }
       store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
+    if (!store.vtMig && vtNow().slice(0, 10) <= "2026-10-17") { store.vt = store.vt || {}; let nb = 0; Object.keys(store.visited).forEach((k) => { if (store.visited[k] && !store.vt[k] && byKey(k)) { store.vt[k] = "2026-10-16"; syq[k] = 1; nb++; } }); store.vtMig = 1; if (nb) { syQSave(); ch++; clearTimeout(syTimer); syTimer = setTimeout(syFlush, 800); } }
     applyOC();
     if (rmNeedReload) { save(); location.reload(); return; }
     loadListings();
