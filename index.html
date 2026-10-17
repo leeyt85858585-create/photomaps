@@ -225,7 +225,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-t</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-u</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -505,7 +505,11 @@ function renderDetail() {
   if (d.custom && /^현장추가 /.test(d.j) && !d.r) {
     store.caddr = store.caddr || {}; const k = skey(d);
     if (store.caddr[k]) { const a = store.caddr[k]; row("도로명", a.split(" (")[0]); const m2 = a.match(/\((.+)\)\s*$/); if (m2) row("지번", m2[1]); }
-    else { row("주소", "조회 중… (" + d.j.replace("현장추가 ", "") + ")"); if (!d.adTry) { d.adTry = 1; revAddr(d.la, d.lo).then((a) => { if (a) { store.caddr[k] = a; save(); if (selected === d.id) renderDetail(); } }); } }
+    else {
+      row("주소", (d.adErr ? "조회 실패 (" + d.adErr + ") · " : "조회 중… ") + d.j.replace("현장추가 ", ""));
+      if (!d.adTry) { d.adTry = 1; revAddr(d.la, d.lo).then((a) => { if (a) { store.caddr[k] = a; save(); } else d.adErr = revErr || "알 수 없음"; if (selected === d.id) renderDetail(); }); }
+      else if (d.adErr) { const rb = document.createElement("button"); rb.type = "button"; rb.className = "lgbtn"; rb.textContent = "주소 다시 조회"; rb.onclick = () => { d.adTry = 0; d.adErr = ""; renderDetail(); }; dl.append(document.createElement("dt"), rb); }
+    }
   } else if (d.custom) { const jm = String(d.j).match(/\((.+)\)\s*$/); if (d.r) row("도로명", d.r); if (jm) row("지번", jm[1]); if (!d.r) row("주소", d.j); }
   else if (d.r) row("도로명", d.r); else row("주소", d.j);
   if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
@@ -671,12 +675,16 @@ function addCustom(a, local) {
 }
 let pickPos = null, pickMk = null, pickBound = false;
 function curCenter() { try { if (map) { const c = map.getCenter(); return { la: c.lat(), lo: c.lng() }; } } catch (e) {} return me || { la: 37.5565, lo: 126.9215 }; }
+let revErr = "";
 function revAddr(la, lo) {
   return new Promise((res) => {
-    const t = setTimeout(() => res(""), 4000);
+    revErr = "";
+    if (typeof naver === "undefined" || !naver.maps || !naver.maps.Service) { revErr = "주소 모듈 미로드"; res(""); return; }
+    const t = setTimeout(() => { revErr = "응답 없음(4초)"; res(""); }, 4000);
     try {
       naver.maps.Service.reverseGeocode({ coords: new naver.maps.LatLng(la, lo), orders: "roadaddr,addr" }, (st, rs) => {
         clearTimeout(t);
+        if (st !== 200) revErr = "상태 " + st;
         try {
           const L = (rs && rs.v2 && rs.v2.results) || [];
           const nm = (x) => x.land.number1 + (x.land.number2 ? "-" + x.land.number2 : "");
@@ -686,9 +694,9 @@ function revAddr(la, lo) {
           if (r) out = rg(r) + " " + r.land.name + " " + nm(r);
           if (j) out += (out ? " (" : rg(j) + " ") + j.region.area3.name + " " + nm(j) + (out ? ")" : "");
           res(out.trim());
-        } catch (e) { res(""); }
+        } catch (e) { revErr = revErr || ("오류 " + e.message); res(""); }
       });
-    } catch (e) { clearTimeout(t); res(""); }
+    } catch (e) { clearTimeout(t); revErr = "오류 " + e.message; res(""); }
   });
 }
 function setPick(la, lo) {
