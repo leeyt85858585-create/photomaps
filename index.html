@@ -234,7 +234,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-y</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-z</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -717,8 +717,11 @@ function setPick(la, lo) {
     } else { pickMk.setMap(map); pickMk.setPosition(p); }
   } catch (e) {}
 }
+function markBtn() { try { $("#addbtn").classList.toggle("zsel", !$("#addp").hidden); $("#zbtn").classList.toggle("zsel", !$("#zbar").hidden); } catch (e) {} }
 function endPick() { pickPos = null; $("#addp").hidden = true; try { if (pickMk) pickMk.setMap(null); } catch (e) {} }
 $("#addbtn").onclick = () => {
+  if (!$("#addp").hidden) { endPick(); markBtn(); return; }
+  try { if (!$("#zbar").hidden) zEnd(); } catch (e) {}
   pickPos = null; $("#addp").hidden = false; $("#addN").value = ""; $("#addMsg").textContent = ""; $("#addPos").textContent = "지도에서 건물을 탭해 위치 지정 (핀은 끌어서 이동)";
   try { if (pickMk) pickMk.setMap(null); } catch (e) {}
   if (!pickBound && map && typeof naver !== "undefined") { pickBound = true; naver.maps.Event.addListener(map, "click", (e) => { if (!$("#addp").hidden) setPick(e.coord.lat(), e.coord.lng()); }); }
@@ -954,6 +957,7 @@ function zEnd() {
 }
 let zBound = false;
 $("#zbtn").onclick = () => {
+  if (!$("#zbar").hidden) { zEnd(); markBtn(); return; }
   try { endPick(); } catch (e) {}
   zDraft = { c: null, r: 0, p: [] }; zShape = "c"; $("#zbar").hidden = false; $("#zN").value = ""; $("#zMsg").textContent = ""; zHintSet(); zDraw();
   try { markers.forEach((m) => m && m.setClickable(false)); LMK.forEach((m) => m && m.setClickable(false)); } catch (e) {}
@@ -976,6 +980,8 @@ $("#zOk").onclick = () => {
   else { if (d.p.length < 3) { $("#zMsg").textContent = "꼭짓점을 3개 이상 탭하세요"; return; } z = { t: "p", p: d.p }; }
   z.id = "z" + Date.now().toString(36); z.n = n; store.zones.push(z); save(); zEnd(); paintZones(); zOpen(true);
 };
+
+try { const mo = new MutationObserver(markBtn); ["#addp", "#zbar"].forEach((id) => mo.observe($(id), { attributes: true, attributeFilter: ["hidden"] })); } catch (e) {}
 
 // ===== 구글 시트 동기화 =====
 const SYK = "hongdae-imjang-sync-v1", SYQ = "hongdae-imjang-syncq-v1";
