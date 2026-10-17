@@ -166,7 +166,7 @@ body.fsb{overflow:hidden}
 
 #map{width:100%;height:100%}
 .lmk{position:relative;width:0;height:0}
-.lmk .d{position:absolute;left:-9px;top:-9px;width:18px;height:18px;transform:rotate(45deg);background:#f59e0b;border:2px solid #fff;border-radius:4px;box-shadow:0 0 0 1px rgba(0,0,0,.45);box-sizing:border-box}
+.lmk .d{position:absolute;left:-6px;top:-6px;width:12px;height:12px;transform:rotate(45deg);background:#f59e0b;border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.45);box-sizing:border-box}
 .lmk.sel .d{background:#1b1300;border-color:#fbbf24}
 #lhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
 #lhead .sm{font-weight:400;font-size:11px;color:var(--muted)}
@@ -186,7 +186,8 @@ body.fsb{overflow:hidden}
 .zoomed .mk .l,.mk.sel .l{display:inline}
 .zl{font:700 13px var(--font-body);white-space:nowrap;transform:translate(-50%,-100%)}
 .err{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;background:var(--mapbg);color:var(--ink)}
-.mapctl{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:calc(100% - 70px);z-index:5}
+#fsbtn{position:absolute;right:50px;top:10px;z-index:6}
+.mapctl{position:absolute;left:10px;top:10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:calc(100% - 150px);z-index:5}
 .lgbtn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .lgbtn:hover{border-color:var(--accent)}
 .sheet{position:absolute;left:10px;right:10px;bottom:22px;z-index:6;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.25);display:none}
@@ -215,7 +216,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-m</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-n</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -229,6 +230,7 @@ body.fsb{overflow:hidden}
     <div class="mapcard">
       <div id="map"></div>
       <div class="err" id="err"><div><b>네이버 지도를 불러오지 못했습니다.</b><br>Client ID, 등록한 서비스 URL(접속 주소와 일치해야 함), 인터넷 연결을 확인하세요.<br>목록과 상세는 그대로 쓸 수 있습니다.</div></div>
+      <button id="fsbtn" class="lgbtn" type="button">전체화면</button>
       <div class="mapctl">
         <button id="lgbtn" class="lgbtn" type="button" aria-expanded="false">범례 ▸</button>
         <div class="legend" id="legend" hidden>
@@ -257,7 +259,6 @@ body.fsb{overflow:hidden}
         </div>
         <button id="locbtn" class="lgbtn" type="button">내 위치</button>
         <button id="addbtn" class="lgbtn" type="button">＋ 매장 추가</button>
-        <button id="fsbtn" class="lgbtn" type="button">전체화면</button>
       </div>
             <div class="addp" id="addp" hidden>
         <b>현장에서 매장 추가</b>
@@ -580,6 +581,7 @@ function hull(pts) {
 }
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: true, zoomControlOptions: { position: naver.maps.Position.TOP_RIGHT } });
+  try { const zc = map.controls[naver.maps.Position.TOP_RIGHT].getAt(0); if (zc) { zc.style.transform = "scale(.8)"; zc.style.transformOrigin = "top right"; } } catch (e) {}
   const TIER = [[1000, "#f6e3a8"], [2000, "#f2c58e"], [3000, "#e9a07c"], [5000, "#d97b66"], [1e9, "#b5524a"]];
   const statOf = (z) => { const v = DATA.filter(d => d.z === z && d.hi != null).map(d => d.hi + 400).sort((x, y) => x - y); if (!v.length) return null; const m = v.length >> 1; return { avg: v.reduce((a, b) => a + b, 0) / v.length, med: v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2 }; };
   AREAS.forEach(([z, label, col0]) => {
