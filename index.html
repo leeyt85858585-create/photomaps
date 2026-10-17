@@ -206,7 +206,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-h</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-i</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -480,11 +480,11 @@ function renderDetail() {
   } else cx.remove();
   if (d.custom) buildCustomTools(d, el);
   renderPhotos(d, el.querySelector(".shp"));
-  const bx = el.querySelector(".shb"), bv = store.booth[k] || 0, other = bv > 6 || boothOther === k;
+  const bx = el.querySelector(".shb"), bv = store.booth[k] || 0, other = bv > 8;
   const bl = document.createElement("span"); bl.className = "lab"; bl.textContent = "부스 수"; bx.appendChild(bl);
-  for (let n = 1; n <= 6; n++) { const b = document.createElement("button"); b.type = "button"; b.textContent = n; if (bv === n && !other) b.className = "on"; b.onclick = () => { boothOther = null; setBooth(d, bv === n ? 0 : n); }; bx.appendChild(b); }
-  const ob = document.createElement("button"); ob.type = "button"; ob.textContent = "기타"; if (other) ob.className = "on"; ob.onclick = () => { boothOther = other ? null : k; if (other) setBooth(d, 0); else renderDetail(); }; bx.appendChild(ob);
-  if (other) { const i = document.createElement("input"); i.type = "number"; i.inputMode = "numeric"; i.min = 7; i.placeholder = "직접 입력"; i.value = bv > 6 ? bv : ""; i.className = "boothin"; i.onchange = () => { const n = parseInt(i.value, 10); setBooth(d, n > 0 ? n : 0); }; bx.appendChild(i); const u = document.createElement("span"); u.className = "lab"; u.textContent = "개"; bx.appendChild(u); }
+  for (let n = 1; n <= 8; n++) { const b = document.createElement("button"); b.type = "button"; b.textContent = n; if (bv === n && !other) b.className = "on"; b.onclick = () => { boothOther = null; setBooth(d, bv === n ? 0 : n); }; bx.appendChild(b); }
+  if (other) { const ob = document.createElement("button"); ob.type = "button"; ob.textContent = "9+"; ob.className = "on"; ob.onclick = () => setBooth(d, 0); bx.appendChild(ob); }
+  if (other) { const i = document.createElement("input"); i.type = "number"; i.inputMode = "numeric"; i.min = 9; i.placeholder = "직접 입력"; i.value = bv; i.className = "boothin"; i.onchange = () => { const n = parseInt(i.value, 10); setBooth(d, n > 0 ? n : 0); }; bx.appendChild(i); const u = document.createElement("span"); u.className = "lab"; u.textContent = "개"; bx.appendChild(u); }
   const chk = $("#vchk"); chk.checked = d.vis;
   chk.onchange = () => setVis(d, chk.checked);
   buildMemos(d, k);
