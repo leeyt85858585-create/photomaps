@@ -198,7 +198,7 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-a</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-b</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -627,6 +627,7 @@ async function syPull() {
     j.rows.forEach((w) => {
       let d = byKey(w.key); if (!d && w.lat && w.lng && w.name) d = addCustom({ n: String(w.name), la: Number(w.lat), lo: Number(w.lng), j: String(w.key).slice(0, String(w.key).indexOf("|")), z: zOf(w.area, Number(w.lat), Number(w.lng)) }, false);
       if (!d || syq[w.key]) return;
+      if ("booth" in w && !store.booth[w.key]) { const b0 = parseInt(w.booth, 10); if (b0 > 0) { store.booth[w.key] = b0; ch++; } }
       const ts = Number(w.ts) || 0; if (ts <= (store.ts[w.key] || 0)) return;
       const v = Number(w.visited) ? 1 : 0, c = CLSV[w.cls] || "";
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
