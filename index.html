@@ -160,7 +160,7 @@ body.fsb{overflow:hidden}
   .app{display:flex;flex-direction:column;align-items:stretch;gap:12px}
   .side{display:contents}
   .mapcard{order:0;height:46vh;min-height:300px}
-  .side .detail{order:1}.side .filters{order:2}.side .list{order:3}.side #syp{order:4}.side #cmp{order:4}.side .foot{order:5}
+  .side .detail{order:1}.side #lpanel{order:1}.side .filters{order:2}.side .list{order:3}.side #syp{order:4}.side #cmp{order:4}.side .foot{order:5}
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -215,7 +215,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-l</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-m</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -734,7 +734,7 @@ $("#fsbtn").onclick = () => fsSet(!fsOn());
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsOn()) fsSet(false); });
 
 // ===== 부동산 매물 (비공개 시트에서 불러옴: 공개 페이지에는 데이터를 넣지 않음) =====
-let LIST = [], LMK = [];
+let LIST = [], LMK = [], lEdit = false;
 const GEOK = "imjang-geo-v1"; let geo = {}; try { geo = JSON.parse(localStorage.getItem(GEOK) || "{}"); } catch (e) {}
 const manwon = (v) => { const n = Number(String(v).replace(/,/g, "")); return v === "" || v == null ? "미확인" : isFinite(n) && String(v).trim() !== "" ? n.toLocaleString() + "만" : String(v); };
 function approxL(l) {
@@ -746,17 +746,17 @@ function approxL(l) {
     if (x != null && x < bd) { bd = x; best = d; } });
   if (best) { l.la = best.la; l.lo = best.lo; l.approx = true; return true; } return false;
 }
-function geocodeL(l) {
-  return new Promise((res0) => { const res = (ok) => res0(ok || approxL(l));
-    if (l.la && l.lo) return res(true);
-    const g = geo[l.addr]; if (g) { l.la = g[0]; l.lo = g[1]; return res(true); }
-    try {
-      if (typeof naver === "undefined" || !naver.maps.Service) return res(false);
-      naver.maps.Service.geocode({ query: "서울 " + l.addr }, (st, r) => {
-        try { const a = st === naver.maps.Service.Status.OK && r.v2.addresses && r.v2.addresses[0]; if (a) { l.la = Number(a.y); l.lo = Number(a.x); geo[l.addr] = [l.la, l.lo]; try { localStorage.setItem(GEOK, JSON.stringify(geo)); } catch (e) {} res(true); } else res(false); } catch (e) { res(false); }
-      });
-    } catch (e) { res(false); }
-  });
+let LPOS = {};
+async function geocodeL(l) {
+  if (l.la && l.lo) return true;
+  const p = LPOS[l.addr]; if (p) { l.la = p[0]; l.lo = p[1]; return true; }
+  const g = geo[l.addr]; if (g) { l.la = g[0]; l.lo = g[1]; return true; }
+  try {
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&accept-language=ko&countrycodes=kr&q=" + encodeURIComponent(l.addr));
+    const a = (await r.json()).find((x) => x.category !== "place" && x.category !== "boundary");
+    if (a) { l.la = Number(a.lat); l.lo = Number(a.lon); geo[l.addr] = [l.la, l.lo]; try { localStorage.setItem(GEOK, JSON.stringify(geo)); } catch (e) {} return true; }
+  } catch (e) {}
+  return approxL(l);
 }
 function lOpen(on) { $("#lrows").hidden = !on; $("#larr").textContent = on ? "▾" : "▸"; $("#lhead").setAttribute("aria-expanded", String(on)); }
 function paintListings() {
@@ -789,6 +789,14 @@ function renderListing(l, el) {
   row("확인일", l.date); row("확인 부동산", l.agent + (l.tel ? " · " + l.tel : "")); row("특이사항", l.note);
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", "https://map.kakao.com/link/search/" + encodeURIComponent(l.addr)], ["네이버지도에서 검색", "https://map.naver.com/p/search/" + encodeURIComponent("서울 " + l.addr)]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
+  { const bx = document.createElement("div"); bx.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center";
+    const mkb = (t, f) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = f; return b; };
+    const i = LIST.indexOf(l), mk = LMK[i];
+    if (!lEdit) bx.append(mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }));
+    else { const t = document.createElement("span"); t.style.cssText = "font-size:12px;color:var(--muted)"; t.textContent = "지도의 주황 마름모를 끌어 옮기세요";
+      bx.append(t, mkb("위치 저장", async () => { try { const p = mk.getPosition(); l.la = p.lat(); l.lo = p.lng(); mk.setDraggable(false); lEdit = false; LPOS[l.addr] = [l.la, l.lo]; renderDetail(); await syPost({ action: "listpos", addr: l.addr, lat: l.la, lng: l.lo }); } catch (e) { sySt("위치 저장 실패 (이 기기에는 저장됨)"); } }),
+        mkb("취소", () => { try { if (mk && l.old) { mk.setPosition(new naver.maps.LatLng(l.old[0], l.old[1])); mk.setDraggable(false); } } catch (e) {} lEdit = false; renderDetail(); })); }
+    el.appendChild(bx); }
   if (l.approx) { const m = document.createElement("div"); m.style.cssText = "font-size:12px;color:var(--muted);margin-top:6px"; m.textContent = "※ 정확한 주소 변환이 안 돼 근처 매장 위치로 대략 표시했습니다."; el.appendChild(m); }
   if (!l.la) { const m = document.createElement("div"); m.className = "msg"; m.style.cssText = "font-size:12px;color:#b42318;margin-top:6px"; m.textContent = "지도 위치를 찾지 못해 표시하지 못했습니다 (주소 변환 실패)."; el.appendChild(m); }
 }
@@ -797,7 +805,7 @@ $("#lhead").onclick = () => lOpen($("#lrows").hidden);
 async function loadListings(force) {
   if (!syOn()) return; if (!force && Date.now() - lastL < 120000) return; lastL = Date.now();
   try {
-    const j = await syPost({ action: "listings" }); const rows = j.rows || [];
+    const j = await syPost({ action: "listings" }); const rows = j.rows || []; LPOS = j.pos || {};
     const next = rows.filter((r) => r["매물명"] || r["주소"]).map((r) => ({ name: String(r["매물명"] || r["주소"]), addr: String(r["주소"] || ""), area: String(r["상권"] || ""), status: String(r["현재 상태"] || ""), rent: r["월세"], dep: r["보증금"], key: r["권리금"], neg: String(r["협의예상금"] || ""), py: String(r["평수"] || ""), ppr: r["평당 월세"], ppk: r["평당 권리금"], mgmt: String(r["관리비"] || ""), date: String(r["확인일"] || ""), agent: String(r["확인 부동산"] || ""), tel: String(r["연락처"] || ""), note: String(r["특이사항"] || ""), la: Number(r["위도"]) || 0, lo: Number(r["경도"]) || 0 }));
     LMK.forEach((m) => { try { m && m.setMap(null); } catch (e) {} }); LMK = []; LIST = next;
     for (const l of LIST) await geocodeL(l);
@@ -918,7 +926,7 @@ refresh(); renderDetail(); buildCmp();
 function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid"; } try { loadListings(true); } catch (e) {} }
 const CID = "lqh247mo03";
 const sc = document.createElement("script");
-sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID + "&submodules=geocoder";
+sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID;
 sc.onload = boot; sc.onerror = () => { $("#err").style.display = "grid"; };
 document.head.appendChild(sc);
 </script></body></html>
