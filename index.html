@@ -165,6 +165,14 @@ body.fsb{overflow:hidden}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 #map{width:100%;height:100%}
+.lmk{position:relative;width:0;height:0}
+.lmk .t{position:absolute;left:0;top:0;transform:translate(-50%,-100%);white-space:nowrap;background:#f59e0b;color:#1b1300;font:700 12px/1 system-ui,sans-serif;padding:5px 8px;border-radius:7px;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.5)}
+.lmk .t:after{content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);border:5px solid transparent;border-top-color:#f59e0b}
+.lmk.sel .t{background:#1b1300;color:#fbbf24}
+.lrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:8px 2px}
+.lrow .bd{background:#f59e0b;color:#1b1300;font-weight:700;font-size:11px;border-radius:5px;padding:2px 6px}
+.lrow .sub{color:var(--muted);font-size:12px}
+.lrow[aria-current="true"]{background:color-mix(in srgb,#f59e0b 14%,transparent)}
 .mk{position:relative;width:0;height:0}
 .mk .d{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);box-sizing:border-box}
 .mk.none .d{background:transparent;border:3px solid #3f4d58;box-shadow:0 0 0 1px rgba(255,255,255,.9)}
@@ -206,7 +214,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-j</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-k</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -267,6 +275,7 @@ body.fsb{overflow:hidden}
         <div class="group"><span class="lab">오픈업</span><div class="seg" id="fOu"></div></div>
         <div class="group"><span class="lab">방문</span><div class="seg" id="fVisit"></div></div>
       </div>
+      <div class="panel" id="lpanel" hidden><b style="font-size:13px">부동산 매물 <span id="lcount"></span></b> <span style="font-size:11px;color:var(--muted)">(부동산에서 확인된 매물)</span><div id="lrows"></div></div>
       <div class="panel detail" id="detail"></div>
       <div class="panel list">
         <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
@@ -334,7 +343,7 @@ DATA.forEach((d) => {
   d.vis = !!store.visited[skey(d)]; d.cls = (store.cls || {})[skey(d)] || "";
 });
 const tier = (h) => h == null ? -1 : h <= 500 ? 0 : h <= 1500 ? 1 : h <= 3000 ? 2 : h <= 5000 ? 3 : 4;
-let selected = null, map = null, markers = [];
+let selected = null, selectedL = null, map = null, markers = [];
 /* ---------- 필터·목록·상세 ---------- */
 const F = { zone: "all", ou: "all", visit: "all" };
 const OPTS = {
@@ -457,6 +466,7 @@ function renderList() {
 }
 function renderDetail() {
   const el = $("#detail");
+  if (selectedL != null && LIST[selectedL]) { revokeThumbs(); renderListing(LIST[selectedL], el); return; }
   if (selected == null) { revokeThumbs(); el.innerHTML = '<div class="empty">지도의 점이나 목록의 매장을 누르면 상세가 여기에 나옵니다.</div>'; return; }
   const d = DATA[selected], k = skey(d);
   const kakao = "https://map.kakao.com/link/map/" + encodeURIComponent(d.n) + "," + d.la + "," + d.lo;
@@ -546,7 +556,7 @@ function buildCmp() {
 }
 function select(id, fromList) {
   if (syOn() && Date.now() - lastPull > 4000) syPull();
-  fsHidden = false; const prev = selected; selected = id; renderDetail(); renderList(); renderSheet(); try { fsInfo(); } catch (e) {}
+  fsHidden = false; if (selectedL != null) { selectedL = null; paintListings(); } const prev = selected; selected = id; renderDetail(); renderList(); renderSheet(); try { fsInfo(); } catch (e) {}
   if (prev != null) setIcon(prev);
   setIcon(id);
   if (fromList && window.innerWidth <= 920) { try { document.querySelector(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
@@ -714,13 +724,84 @@ function fsSet(on) {
 let fsHidden = false;
 const detEl = $("#detail"), detHome = detEl.parentNode, detNext = detEl.nextSibling;
 function fsInfo() {
-  const sh = $("#fssheet"), d = selected != null ? DATA.find((x) => x.id === selected) : null;
+  const sh = $("#fssheet"), d = selectedL != null && LIST[selectedL] ? { n: "매물 · " + LIST[selectedL].name } : selected != null ? DATA.find((x) => x.id === selected) : null;
   if (fsOn()) { if (detEl.parentNode !== sh) sh.appendChild(detEl); } else if (detEl.parentNode === sh) detHome.insertBefore(detEl, detNext);
   if (d && fsOn() && !fsHidden) { $("#fsname").textContent = d.n; sh.classList.add("on"); } else sh.classList.remove("on");
 }
 $("#fsx").onclick = () => { fsHidden = true; fsInfo(); };
 $("#fsbtn").onclick = () => fsSet(!fsOn());
 document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fsOn()) fsSet(false); });
+
+// ===== 부동산 매물 (비공개 시트에서 불러옴: 공개 페이지에는 데이터를 넣지 않음) =====
+let LIST = [], LMK = [];
+const GEOK = "imjang-geo-v1"; let geo = {}; try { geo = JSON.parse(localStorage.getItem(GEOK) || "{}"); } catch (e) {}
+const manwon = (v) => { const n = Number(String(v).replace(/,/g, "")); return v === "" || v == null ? "미확인" : isFinite(n) && String(v).trim() !== "" ? n.toLocaleString() + "만" : String(v); };
+function approxL(l) {
+  // 주소 변환이 안 될 때: 같은 도로명/동의 가장 가까운 번지 매장 위치로 근사
+  let best = null, bd = 1e9; const road = l.addr.match(/([가-힣0-9]+(?:로|길)\s?\d*(?:길)?)\s+(\d+)/), jb = l.addr.match(/([가-힣]+동)\s+(\d+)(?:-\d+)?/);
+  DATA.forEach((d) => { if (d.custom) return; let x = null;
+    if (road && d.r) { const m = d.r.match(/^(.*?(?:로|길)\s?\d*(?:길)?)\s+(\d+)/); if (m && m[1].replace(/\s/g, "") === road[1].replace(/\s/g, "")) x = Math.abs(+m[2] - +road[2]); }
+    if (x == null && jb) { const m = d.j.match(/([가-힣]+동)\s+(\d+)/); if (m && m[1] === jb[1]) x = Math.abs(+m[2] - +jb[2]); }
+    if (x != null && x < bd) { bd = x; best = d; } });
+  if (best) { l.la = best.la; l.lo = best.lo; l.approx = true; return true; } return false;
+}
+function geocodeL(l) {
+  return new Promise((res0) => { const res = (ok) => res0(ok || approxL(l));
+    if (l.la && l.lo) return res(true);
+    const g = geo[l.addr]; if (g) { l.la = g[0]; l.lo = g[1]; return res(true); }
+    try {
+      if (typeof naver === "undefined" || !naver.maps.Service) return res(false);
+      naver.maps.Service.geocode({ query: "서울 " + l.addr }, (st, r) => {
+        try { const a = st === naver.maps.Service.Status.OK && r.v2.addresses && r.v2.addresses[0]; if (a) { l.la = Number(a.y); l.lo = Number(a.x); geo[l.addr] = [l.la, l.lo]; try { localStorage.setItem(GEOK, JSON.stringify(geo)); } catch (e) {} res(true); } else res(false); } catch (e) { res(false); }
+      });
+    } catch (e) { res(false); }
+  });
+}
+function paintListings() {
+  const p = $("#lpanel"), box = $("#lrows"); if (!p) return;
+  p.hidden = !LIST.length; $("#lcount").textContent = LIST.length ? LIST.length + "건" : ""; box.innerHTML = "";
+  LIST.forEach((l, i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "lrow"; if (selectedL === i) b.setAttribute("aria-current", "true");
+    b.innerHTML = '<span class="bd">매물</span><span><div class="nm"></div><div class="sub"></div></span><span class="sub" style="text-align:right"></span>';
+    b.querySelector(".nm").textContent = l.name + (l.area ? " · " + l.area : "");
+    b.querySelector(".sub").textContent = l.addr;
+    b.lastChild.textContent = "권리금 " + manwon(l.key);
+    b.onclick = () => selectListing(i); box.appendChild(b);
+  });
+  LMK.forEach((m, i) => { if (!m) return; try { m.setIcon({ content: '<div class="lmk' + (selectedL === i ? " sel" : "") + '"><div class="t">매물 ' + (LIST[i].name || "").replace(/[<>&]/g, "") + '</div></div>', anchor: new naver.maps.Point(0, 0) }); } catch (e) {} });
+}
+function selectListing(i) {
+  const prev = selected; selected = null; selectedL = i; fsHidden = false;
+  if (prev != null) setIcon(prev);
+  renderDetail(); renderList(); paintListings(); try { fsInfo(); } catch (e) {}
+  const l = LIST[i]; try { if (map && l.la) { map.setZoom(Math.max(map.getZoom(), 17)); map.panTo(new naver.maps.LatLng(l.la, l.lo)); } } catch (e) {}
+  if (window.innerWidth <= 920 && !fsOn()) { try { document.querySelector(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
+}
+function renderListing(l, el) {
+  el.innerHTML = '<h2></h2><div class="badges"></div><dl></dl><div class="links"></div>';
+  el.querySelector("h2").textContent = l.name;
+  const bd = el.querySelector(".badges"); [["부동산 매물", "warn"], [l.status || "", ""], [l.area || "", ""]].forEach(([t, c]) => { if (!t) return; const s = document.createElement("span"); s.className = "badge " + c; s.textContent = t; bd.appendChild(s); });
+  const dl = el.querySelector("dl"), row = (a, b, c) => { if (b === "" || b == null) b = "미확인"; const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (c) v.className = c; dl.append(t, v); };
+  row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("협의예상금", l.neg); row("평수", l.py ? l.py.replace(/^(\d+(?:\.\d+)?)/, "$1평") : "");
+  row("평당 월세", l.ppr === "" ? "" : manwon(l.ppr), "num"); row("평당 권리금", l.ppk === "" ? "" : manwon(l.ppk), "num"); row("관리비", l.mgmt);
+  row("확인일", l.date); row("확인 부동산", l.agent + (l.tel ? " · " + l.tel : "")); row("특이사항", l.note);
+  const ln = el.querySelector(".links");
+  [["카카오맵에서 열기", "https://map.kakao.com/link/search/" + encodeURIComponent(l.addr)], ["네이버지도에서 검색", "https://map.naver.com/p/search/" + encodeURIComponent("서울 " + l.addr)]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
+  if (l.approx) { const m = document.createElement("div"); m.style.cssText = "font-size:12px;color:var(--muted);margin-top:6px"; m.textContent = "※ 정확한 주소 변환이 안 돼 근처 매장 위치로 대략 표시했습니다."; el.appendChild(m); }
+  if (!l.la) { const m = document.createElement("div"); m.className = "msg"; m.style.cssText = "font-size:12px;color:#b42318;margin-top:6px"; m.textContent = "지도 위치를 찾지 못해 표시하지 못했습니다 (주소 변환 실패)."; el.appendChild(m); }
+}
+let lastL = 0;
+async function loadListings(force) {
+  if (!syOn()) return; if (!force && Date.now() - lastL < 120000) return; lastL = Date.now();
+  try {
+    const j = await syPost({ action: "listings" }); const rows = j.rows || [];
+    const next = rows.filter((r) => r["매물명"] || r["주소"]).map((r) => ({ name: String(r["매물명"] || r["주소"]), addr: String(r["주소"] || ""), area: String(r["상권"] || ""), status: String(r["현재 상태"] || ""), rent: r["월세"], dep: r["보증금"], key: r["권리금"], neg: String(r["협의예상금"] || ""), py: String(r["평수"] || ""), ppr: r["평당 월세"], ppk: r["평당 권리금"], mgmt: String(r["관리비"] || ""), date: String(r["확인일"] || ""), agent: String(r["확인 부동산"] || ""), tel: String(r["연락처"] || ""), note: String(r["특이사항"] || ""), la: Number(r["위도"]) || 0, lo: Number(r["경도"]) || 0 }));
+    LMK.forEach((m) => { try { m && m.setMap(null); } catch (e) {} }); LMK = []; LIST = next;
+    for (const l of LIST) await geocodeL(l);
+    if (map && typeof naver !== "undefined") LIST.forEach((l, i) => { if (!l.la) return; const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 20, icon: { content: "<div></div>", anchor: new naver.maps.Point(0, 0) } }); naver.maps.Event.addListener(m, "click", () => selectListing(i)); LMK[i] = m; });
+    paintListings(); if (selectedL != null) renderDetail();
+  } catch (e) {}
+}
 
 // ===== 구글 시트 동기화 =====
 const SYK = "hongdae-imjang-sync-v1", SYQ = "hongdae-imjang-syncq-v1";
@@ -787,6 +868,7 @@ async function syPull() {
       store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
     if (rmNeedReload) { save(); location.reload(); return; }
+    loadListings();
     if (ch) { save(); refresh(); const a = document.activeElement; if (!(a && a.tagName === "TEXTAREA")) renderDetail(); }
     return ch;
   } catch (e) { sySt("시트 불러오기 실패 (주소·비밀키·인터넷 확인)"); }
@@ -830,10 +912,10 @@ setInterval(() => { if (!document.hidden) syAll(); }, 30000);
 if (syOn()) setTimeout(syAll, 800);
 
 refresh(); renderDetail(); buildCmp();
-function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid"; } }
+function boot() { try { initMap(); } catch (e) { $("#err").style.display = "grid"; } try { loadListings(true); } catch (e) {} }
 const CID = "lqh247mo03";
 const sc = document.createElement("script");
-sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID;
+sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=" + CID + "&submodules=geocoder";
 sc.onload = boot; sc.onerror = () => { $("#err").style.display = "grid"; };
 document.head.appendChild(sc);
 </script></body></html>
