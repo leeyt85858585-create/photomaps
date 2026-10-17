@@ -216,7 +216,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-n</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.17-o</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -753,11 +753,14 @@ async function geocodeL(l) {
   if (l.la && l.lo) return true;
   const p = LPOS[l.addr]; if (p) { l.la = p[0]; l.lo = p[1]; return true; }
   const g = geo[l.addr]; if (g) { l.la = g[0]; l.lo = g[1]; return true; }
-  try {
-    const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&accept-language=ko&countrycodes=kr&q=" + encodeURIComponent(l.addr));
-    const a = (await r.json()).find((x) => x.category !== "place" && x.category !== "boundary");
-    if (a) { l.la = Number(a.lat); l.lo = Number(a.lon); geo[l.addr] = [l.la, l.lo]; try { localStorage.setItem(GEOK, JSON.stringify(geo)); } catch (e) {} return true; }
-  } catch (e) {}
+  const cands = [l.road, (l.addr.match(/[가-힣0-9]+(로|길)\s?\d*(번?길)?\s?\d+(-\d+)?/) || [])[0], l.addr].filter(Boolean);
+  for (const c of cands) {
+    try {
+      const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&accept-language=ko&countrycodes=kr&q=" + encodeURIComponent(/서울|경기|인천|구 /.test(c) ? c : "서울 " + c));
+      const a = (await r.json()).find((x) => x.category !== "place" && x.category !== "boundary");
+      if (a) { l.la = Number(a.lat); l.lo = Number(a.lon); geo[l.addr] = [l.la, l.lo]; try { localStorage.setItem(GEOK, JSON.stringify(geo)); } catch (e) {} return true; }
+    } catch (e) {}
+  }
   return approxL(l);
 }
 function lOpen(on) { $("#lrows").hidden = !on; $("#larr").textContent = on ? "▾" : "▸"; $("#lhead").setAttribute("aria-expanded", String(on)); }
@@ -808,7 +811,7 @@ async function loadListings(force) {
   if (!syOn()) return; if (!force && Date.now() - lastL < 120000) return; lastL = Date.now();
   try {
     const j = await syPost({ action: "listings" }); const rows = j.rows || []; LPOS = j.pos || {};
-    const next = rows.filter((r) => r["매물명"] || r["주소"]).map((r) => ({ name: String(r["매물명"] || r["주소"]), addr: String(r["주소"] || ""), area: String(r["상권"] || ""), status: String(r["현재 상태"] || ""), rent: r["월세"], dep: r["보증금"], key: r["권리금"], neg: String(r["협의예상금"] || ""), py: String(r["평수"] || ""), ppr: r["평당 월세"], ppk: r["평당 권리금"], mgmt: String(r["관리비"] || ""), date: String(r["확인일"] || ""), agent: String(r["확인 부동산"] || ""), tel: String(r["연락처"] || ""), note: String(r["특이사항"] || ""), la: Number(r["위도"]) || 0, lo: Number(r["경도"]) || 0 }));
+    const next = rows.filter((r) => r["매물명"] || r["주소"]).map((r) => ({ name: String(r["매물명"] || r["주소"]), addr: String(r["주소"] || ""), road: String(r["도로명"] || r["도로명주소"] || ""), area: String(r["상권"] || ""), status: String(r["현재 상태"] || ""), rent: r["월세"], dep: r["보증금"], key: r["권리금"], neg: String(r["협의예상금"] || ""), py: String(r["평수"] || ""), ppr: r["평당 월세"], ppk: r["평당 권리금"], mgmt: String(r["관리비"] || ""), date: String(r["확인일"] || ""), agent: String(r["확인 부동산"] || ""), tel: String(r["연락처"] || ""), note: String(r["특이사항"] || ""), la: Number(r["위도"]) || 0, lo: Number(r["경도"]) || 0 }));
     LMK.forEach((m) => { try { m && m.setMap(null); } catch (e) {} }); LMK = []; LIST = next;
     for (const l of LIST) await geocodeL(l);
     if (map && typeof naver !== "undefined") LIST.forEach((l, i) => { if (!l.la) return; const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 20, icon: { content: '<div class="lmk"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) } }); naver.maps.Event.addListener(m, "click", () => selectListing(i)); LMK[i] = m; });
