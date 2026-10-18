@@ -236,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 50</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 51</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1106,8 +1106,8 @@ const invite = () => async () => {
   catch (e) { $("#syUrl").value = link; sySt("복사가 막혀 주소 칸에 링크를 표시했습니다. 길게 눌러 복사하세요(저장하지 마세요)."); }
 };
 $("#syInv").onclick = invite();
-(function () {
-  const m = /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return;
+function applySyncHash() {
+  const m = /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return false;
   try {
     const o = dec(m[1]); if (o && o.u && o.t) {
       sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : (sy.who === "이" || sy.who === "홍" ? sy.who : "") };
@@ -1116,7 +1116,11 @@ $("#syInv").onclick = invite();
     }
   } catch (e) {}
   try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
-})();
+  return true;
+}
+applySyncHash();
+// 이미 열려 있는 페이지에 초대 링크를 붙여 넣어도(주소만 바뀌는 경우) 바로 연결되게
+window.addEventListener("hashchange", () => { if (applySyncHash()) { sySt("초대 링크로 연결했습니다. 동기화 중…"); syAll(); } });
 sySt(syOn() ? "시트 연결 설정됨" : "시트 미연결 (이 기기에만 저장)");
 window.addEventListener("online", syAll);
 document.addEventListener("visibilitychange", () => { if (document.hidden) { clearTimeout(syTimer); syFlush(); } else syAll(); });
