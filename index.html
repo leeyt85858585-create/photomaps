@@ -236,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 52</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 53</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -312,6 +312,7 @@ body.fsb{overflow:hidden}
       </div>
       <details class="panel" id="syp"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">구글 시트 연동 설정</summary>
         <div style="display:grid;gap:8px;margin-top:8px">
+          <div style="display:flex;gap:8px"><input id="syLink" type="text" placeholder="초대 링크를 여기에 붙여넣기" autocomplete="off" style="font-size:16px;padding:6px 8px;flex:1;min-width:0"><button type="button" class="lgbtn" id="syLinkGo">연결</button></div>
           <input id="syUrl" type="url" placeholder="웹앱 주소 (https://script.google.com/.../exec)" style="font-size:16px;padding:6px 8px">
           <input id="syTok" type="password" placeholder="비밀키" autocomplete="off" style="font-size:16px;padding:6px 8px">
           <input id="syWho" type="hidden"><div id="syWhoRow" class="shb"><span class="lab">이 기기 사용자</span><button type="button" data-w="이">이</button><button type="button" data-w="홍">홍</button></div>
@@ -1097,6 +1098,18 @@ $("#sySave").onclick = () => {
 };
 $("#sySync").onclick = syAll;
 $("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
+function linkConnect(txt) {
+  const m = /#sync=([A-Za-z0-9+\/=_%-]+)/.exec(String(txt || "")) || [null, String(txt || "").trim()];
+  try { const o = dec(decodeURIComponent(m[1])); if (!(o && o.u && o.t)) throw 0;
+    sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : sy.who || "" };
+    localStorage.setItem(SYK, JSON.stringify(sy)); $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
+    sySt("초대 링크로 연결했습니다. 동기화 중…"); syAll(); return true;
+  } catch (e) { sySt("초대 링크를 읽지 못했습니다. 링크 전체를 복사해 붙여넣어 주세요."); return false; }
+}
+$("#syLinkGo").onclick = () => { if (linkConnect($("#syLink").value)) $("#syLink").value = ""; };
+$("#syLink").addEventListener("paste", () => setTimeout(() => { const v = $("#syLink").value; if (/#sync=/.test(v) && linkConnect(v)) $("#syLink").value = ""; }, 50));
+// 상단 '시트 미연결' 표시를 누르면 연동 설정이 바로 열리게
+(function () { const b = $("#syBadge"); if (!b) return; b.style.cursor = "pointer"; b.onclick = () => { const d = $("#syp"); d.open = true; d.scrollIntoView({ behavior: "smooth", block: "center" }); }; })();
 const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
 const invite = () => async () => {
