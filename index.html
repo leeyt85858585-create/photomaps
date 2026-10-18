@@ -239,7 +239,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 55</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 56</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -558,23 +558,8 @@ function paintWho() { document.querySelectorAll("#syWhoRow button").forEach((b) 
 function buildMemos(d, k) {
   const box = $("#memos"); if (!box) return; box.innerHTML = "";
   const me = whoNow();
-  if (!me) {
-    const w = document.createElement("div"); w.className = "shb";
-    const l = document.createElement("span"); l.className = "lab"; l.textContent = "작성자 선택"; w.appendChild(l);
-    ["이", "홍"].forEach((v) => { const b = document.createElement("button"); b.type = "button"; b.textContent = v; b.onclick = () => { setWho(v); renderDetail(); }; w.appendChild(b); });
-    box.appendChild(w); return;
-  }
   const mkEl = (tag, css, txt) => { const e = document.createElement(tag); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; };
-  const lab = mkEl("div", "margin-top:6px;font-size:12px;color:var(--muted)", "내 메모 · " + me);
-  const ta = document.createElement("textarea"); ta.rows = 3; ta.style.cssText = "width:100%;box-sizing:border-box"; ta.placeholder = "현장 메모 (유동, 간판, 공실 등) — 쓰고 '메모 저장'을 누르세요"; ta.value = store.draft[k] || "";
-  ta.oninput = () => { store.draft[k] = ta.value; save(); };
-  const sv = mkEl("button", "margin-top:6px", "메모 저장"); sv.type = "button"; sv.className = "lgbtn";
-  sv.onclick = () => {
-    const t = ta.value.trim(); if (!t) return;
-    vtMark(k); const now = Date.now(); (store.notes[k] = store.notes[k] || []).push({ id: me + "-" + now + "-" + Math.random().toString(36).slice(2, 6), w: me, t, c: now, ts: now, del: 0 });
-    delete store.draft[k]; save(); touch(d); renderDetail();
-  };
-  box.append(lab, ta, sv);
+  const showNotes = () => {
   const list = (store.notes[k] || []).filter((x) => !x.del).sort((a, b) => (b.c || b.ts) - (a.c || a.ts));
   if (list.length) {
     box.appendChild(mkEl("div", "margin-top:12px;font-size:12px;color:var(--muted)", "이전 메모"));
@@ -594,6 +579,24 @@ function buildMemos(d, k) {
       base(); row.append(body, meta); box.appendChild(row);
     });
   }
+  };
+  if (!me) {
+    const w = document.createElement("div"); w.className = "shb";
+    const l = document.createElement("span"); l.className = "lab"; l.textContent = "작성자 선택"; w.appendChild(l);
+    ["이", "홍"].forEach((v) => { const b = document.createElement("button"); b.type = "button"; b.textContent = v; b.onclick = () => { setWho(v); renderDetail(); }; w.appendChild(b); });
+    box.appendChild(w); showNotes(); return;
+  }
+  const lab = mkEl("div", "margin-top:6px;font-size:12px;color:var(--muted)", "내 메모 · " + me);
+  const ta = document.createElement("textarea"); ta.rows = 3; ta.style.cssText = "width:100%;box-sizing:border-box"; ta.placeholder = "현장 메모 (유동, 간판, 공실 등) — 쓰고 '메모 저장'을 누르세요"; ta.value = store.draft[k] || "";
+  ta.oninput = () => { store.draft[k] = ta.value; save(); };
+  const sv = mkEl("button", "margin-top:6px", "메모 저장"); sv.type = "button"; sv.className = "lgbtn";
+  sv.onclick = () => {
+    const t = ta.value.trim(); if (!t) return;
+    vtMark(k); const now = Date.now(); (store.notes[k] = store.notes[k] || []).push({ id: me + "-" + now + "-" + Math.random().toString(36).slice(2, 6), w: me, t, c: now, ts: now, del: 0 });
+    delete store.draft[k]; save(); touch(d); renderDetail();
+  };
+  box.append(lab, ta, sv);
+  showNotes();
 }
 
 function buildCmp() {
