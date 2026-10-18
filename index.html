@@ -243,7 +243,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.19 · 66</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.19 · 67</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -614,7 +614,7 @@ function renderDetail() {
   if (selected == null) { revokeThumbs(); el.innerHTML = '<div class="empty">지도의 점이나 목록의 매장을 누르면 상세가 여기에 나옵니다.</div>'; return; }
   const d = DATA[selected], k = skey(d);
   const kakao = "https://map.kakao.com/link/map/" + encodeURIComponent(d.n) + "," + d.la + "," + d.lo;
-  const naver = "https://map.naver.com/p/search/" + encodeURIComponent(d.n);
+  const naver = "https://map.naver.com/p/search/" + encodeURIComponent(d.n + (d.r ? " " + d.r : ""));
   el.innerHTML = '<h2></h2><div class="mo8"></div><div class="badges"></div><dl></dl><div class="links"></div>'
     + '<label class="check"><input type="checkbox" id="vchk"><span>방문했음</span></label>'
     + '<div class="shb"></div><div id="memos"></div><div class="shp"></div><div class="shc"></div>';
