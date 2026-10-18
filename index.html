@@ -236,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 51</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 52</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -645,14 +645,14 @@ function initMap() {
   applyFilter();
 }
 function applyFilter() { if (!map) return; DATA.forEach((d) => markers[d.id] && markers[d.id].setMap(pass(d) ? map : null)); }
-function refresh() {
+function refresh(all) {
   buildArea(); ["fOu", "fVisit"].forEach(buildSeg);
   $("#cTotal").textContent = DATA.filter(d => d.s !== "ou").length;
   $("#cOu").textContent = DATA.filter(d => d.hi != null).length;
   $("#cOnly").textContent = DATA.filter(d => d.s === "ou").length;
   $("#cDiff").textContent = DATA.filter(d => d.s === "diff").length;
   $("#cVisit").textContent = DATA.filter(d => d.vis).length;
-  renderList(); applyFilter(); if (selected != null) setIcon(selected);
+  renderList(); applyFilter(); if (all) { DATA.forEach((d) => { if (markers[d.id]) setIcon(d.id); }); } else if (selected != null) setIcon(selected);
 }
 $("#sort").onchange = () => { if ($("#sort").value === "near" && !me) locate(); renderList(); };
 $("#locbtn").onclick = locate;
@@ -1015,7 +1015,7 @@ function applyOC() {
     if (store.cls[k] !== OC[k]) { store.cls[k] = OC[k]; d.cls = OC[k]; n++; }
   }
   save(); syQSave();
-  if (n) { try { refresh(); renderDetail(); } catch (e) {} }
+  if (n) { try { refresh(true); renderDetail(); } catch (e) {} }
 }
 let syTimer = null, syBusy = false;
 function sySt(m) { const e = $("#sySt"); if (e) e.textContent = m; const h = $("#syBadge"); if (h) { h.textContent = !syOn() ? "시트 미연결" : /실패/.test(m) ? "시트 ⚠ 대기 " + Object.keys(syq).length : Object.keys(syq).length ? "시트 저장중…" : "시트 ✓"; h.style.color = /실패/.test(m) || !syOn() ? "#b42318" : ""; } }
@@ -1082,7 +1082,7 @@ async function syPull() {
     applyOC();
     if (rmNeedReload) { save(); location.reload(); return; }
     loadListings();
-    if (ch) { save(); refresh(); const a = document.activeElement; if (!(a && a.tagName === "TEXTAREA")) renderDetail(); }
+    if (ch) { save(); refresh(true); const a = document.activeElement; if (!(a && a.tagName === "TEXTAREA")) renderDetail(); }
     return ch;
   } catch (e) { sySt("시트 불러오기 실패 (주소·비밀키·인터넷 확인)"); }
 }
