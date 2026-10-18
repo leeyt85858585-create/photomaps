@@ -236,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 47번째</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 48번째</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1012,12 +1012,14 @@ function applyOC() {
   for (const k in OC) {
     const d = byKey(k); if (!d) continue;
     if (store.cls[k] === "closed") continue;
-    if (store.cls[k] !== OC[k]) { store.cls[k] = OC[k]; d.cls = OC[k]; store.ts[k] = Date.now(); syq[k] = 1; n++; }
+    if (store.cls[k] !== OC[k]) { store.cls[k] = OC[k]; d.cls = OC[k]; n++; }
   }
   save(); syQSave();
-  if (n) { try { refresh(); renderDetail(); } catch (e) {} if (syOn()) { clearTimeout(syTimer); syTimer = setTimeout(syFlush, 800); } }
+  if (n) { try { refresh(); renderDetail(); } catch (e) {} }
 }
 let syTimer = null, syBusy = false;
+// 이전 버전이 쌓아 둔 '빈 기록' 전송 대기분 정리: 방문·메모·부스·폐업·현장추가·삭제 중 하나도 없으면 시트에 올리지 않는다
+(function () { let n = 0; Object.keys(syq).forEach((k) => { const d = byKey(k); const real = store.removed[k] || (d && d.custom) || store.visited[k] || (store.notes[k] || []).length || store.booth[k] || store.cls[k] === "closed"; if (!real) { delete syq[k]; n++; } }); if (n) syQSave(); })();
 function sySt(m) { const e = $("#sySt"); if (e) e.textContent = m; const h = $("#syBadge"); if (h) { h.textContent = !syOn() ? "시트 미연결" : /실패/.test(m) ? "시트 ⚠ 대기 " + Object.keys(syq).length : Object.keys(syq).length ? "시트 저장중…" : "시트 ✓"; h.style.color = /실패/.test(m) || !syOn() ? "#b42318" : ""; } }
 function syQSave() { try { localStorage.setItem(SYQ, JSON.stringify(syq)); } catch (e) {} }
 const byKey = (k) => DATA.find((d) => skey(d) === k);
@@ -1084,7 +1086,7 @@ async function syPull() {
     return ch;
   } catch (e) { sySt("시트 불러오기 실패 (주소·비밀키·인터넷 확인)"); }
 }
-async function syAll() { if (!syOn()) { sySt("시트 미연결 (이 기기에만 저장)"); return; } sySt("동기화 중…"); await syFlush(); await syPull(); if (!Object.keys(syq).length && !/실패/.test($("#sySt").textContent)) sySt("시트 연결됨 · 동기화 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })); }
+async function syAll() { if (!syOn()) { sySt("시트 미연결 (이 기기에만 저장)"); return; } sySt("동기화 중…"); await syPull(); await syFlush(); if (!Object.keys(syq).length && !/실패/.test($("#sySt").textContent)) sySt("시트 연결됨 · 동기화 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })); }
 $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
 document.querySelectorAll("#syWhoRow button").forEach((b) => { b.onclick = () => { setWho(b.dataset.w); renderDetail(); }; }); paintWho();
 $("#sySave").onclick = () => {
