@@ -236,7 +236,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 53</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 54</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1099,7 +1099,7 @@ $("#sySave").onclick = () => {
 $("#sySync").onclick = syAll;
 $("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
 function linkConnect(txt) {
-  const m = /#sync=([A-Za-z0-9+\/=_%-]+)/.exec(String(txt || "")) || [null, String(txt || "").trim()];
+  const m = /[#?&]sync=([A-Za-z0-9+\/=_%-]+)/.exec(String(txt || "")) || [null, String(txt || "").trim()];
   try { const o = dec(decodeURIComponent(m[1])); if (!(o && o.u && o.t)) throw 0;
     sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : sy.who || "" };
     localStorage.setItem(SYK, JSON.stringify(sy)); $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
@@ -1107,20 +1107,22 @@ function linkConnect(txt) {
   } catch (e) { sySt("초대 링크를 읽지 못했습니다. 링크 전체를 복사해 붙여넣어 주세요."); return false; }
 }
 $("#syLinkGo").onclick = () => { if (linkConnect($("#syLink").value)) $("#syLink").value = ""; };
-$("#syLink").addEventListener("paste", () => setTimeout(() => { const v = $("#syLink").value; if (/#sync=/.test(v) && linkConnect(v)) $("#syLink").value = ""; }, 50));
+$("#syLink").addEventListener("paste", () => setTimeout(() => { const v = $("#syLink").value; if (/sync=/.test(v) && linkConnect(v)) $("#syLink").value = ""; }, 50));
 // 상단 '시트 미연결' 표시를 누르면 연동 설정이 바로 열리게
 (function () { const b = $("#syBadge"); if (!b) return; b.style.cursor = "pointer"; b.onclick = () => { const d = $("#syp"); d.open = true; d.scrollIntoView({ behavior: "smooth", block: "center" }); }; })();
 const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
 const invite = () => async () => {
   if (!syOn()) { sySt("먼저 주소·비밀키를 저장·연결하세요"); return; }
-  const link = location.origin + location.pathname + "#sync=" + enc({ u: sy.url, t: sy.token });
+  const link = location.origin + location.pathname + "?sync=" + encodeURIComponent(enc({ u: sy.url, t: sy.token }));
   try { await navigator.clipboard.writeText(link); sySt("초대 링크를 복사했습니다. 파트너에게만 개인 대화로 보내세요. 링크를 연 폰에서 '이/홍'을 한 번 고르면 됩니다."); }
   catch (e) { $("#syUrl").value = link; sySt("복사가 막혀 주소 칸에 링크를 표시했습니다. 길게 눌러 복사하세요(저장하지 마세요)."); }
 };
 $("#syInv").onclick = invite();
 function applySyncHash() {
-  const m = /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return false;
+  // 새 링크는 ?sync=…(주소 뒤쪽 # 정보가 사라지는 카카오톡·삼성 인터넷 등에서도 유지), 예전 링크는 #sync=…
+  let code = ""; try { code = new URLSearchParams(location.search).get("sync") || ""; } catch (e) {}
+  const m = code ? [null, code] : /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return false;
   try {
     const o = dec(m[1]); if (o && o.u && o.t) {
       sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : (sy.who === "이" || sy.who === "홍" ? sy.who : "") };
@@ -1128,7 +1130,7 @@ function applySyncHash() {
       $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
     }
   } catch (e) {}
-  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
   return true;
 }
 applySyncHash();
