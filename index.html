@@ -110,6 +110,9 @@ textarea { width: 100%; min-height: 62px; resize: vertical; background: var(--bg
 .listhead { display: flex; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .listhead b { color: var(--ink); font-family: var(--font-num); font-weight: 500; }
 .rows { max-height: min(52vh, 520px); overflow-y: auto; }
+.list.closed .rows, .list.closed .listnote { display: none; }
+.list.closed .listhead { border-bottom: 0; }
+.list.closed .sortrow { display: none; }
 .item { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0; border-bottom: 1px solid var(--line); padding: 8px 12px; cursor: pointer; }
 .item:last-child { border-bottom: 0; }
 .item:hover, .item[aria-current="true"] { background: color-mix(in srgb, var(--accent) 10%, transparent); }
@@ -236,7 +239,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 54</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.18 · 55</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -304,8 +307,8 @@ body.fsb{overflow:hidden}
       <div class="panel detail" id="detail"></div>
       <div class="panel" id="lpanel" hidden><button type="button" id="lhead" aria-expanded="false"><span>부동산 매물 <span id="lcount"></span> <span class="sm">(확인된 매물)</span></span><span id="larr">▸</span></button><div id="lrows" hidden></div></div>
       <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>범위별 매출 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(그린 범위 안 매장 매출)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
-      <div class="panel list">
-        <div class="listhead"><span>목록 <b id="lCount">0</b>곳</span>
+      <div class="panel list closed" id="listpanel">
+        <div class="listhead" id="listhead" role="button" tabindex="0" aria-expanded="false" style="cursor:pointer"><span><span id="listCaret" style="display:inline-block;width:14px">▸</span>목록 <b id="lCount">0</b>곳 <span id="listHint" style="font-size:11px">(눌러서 펼치기)</span></span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
         <div class="listnote" style="font-size:11px;color:var(--muted);padding:2px 12px 6px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">점 색 = 추정 실매출 <span style="display:inline-block;width:70px;height:8px;border-radius:4px;border:1px solid rgba(198,40,40,.45);background:linear-gradient(90deg,#fff,#c62828)"></span> 낮음→높음(5,000만+) · <span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2px dashed #8b97a1;box-sizing:border-box"></span> 매출 미확인</div>
         <div class="rows" id="rows"></div>
@@ -1110,6 +1113,12 @@ $("#syLinkGo").onclick = () => { if (linkConnect($("#syLink").value)) $("#syLink
 $("#syLink").addEventListener("paste", () => setTimeout(() => { const v = $("#syLink").value; if (/sync=/.test(v) && linkConnect(v)) $("#syLink").value = ""; }, 50));
 // 상단 '시트 미연결' 표시를 누르면 연동 설정이 바로 열리게
 (function () { const b = $("#syBadge"); if (!b) return; b.style.cursor = "pointer"; b.onclick = () => { const d = $("#syp"); d.open = true; d.scrollIntoView({ behavior: "smooth", block: "center" }); }; })();
+(function () {
+  const h = $("#listhead"), pn = $("#listpanel"); if (!h) return;
+  const tog = () => { const c = pn.classList.toggle("closed"); h.setAttribute("aria-expanded", String(!c)); $("#listCaret").textContent = c ? "▸" : "▾"; $("#listHint").textContent = c ? "(눌러서 펼치기)" : "(접기)"; };
+  h.addEventListener("click", (e) => { if (e.target.closest("select,label")) return; tog(); });
+  h.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && !e.target.closest("select")) { e.preventDefault(); tog(); } });
+})();
 const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
 const invite = () => async () => {
