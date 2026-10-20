@@ -168,7 +168,7 @@ body.fsb{overflow:hidden}
   .app{display:flex;flex-direction:column;align-items:stretch;gap:12px}
   .side{display:contents}
   .mapcard{order:0;height:46vh;min-height:300px}
-  .side .detail{order:1}.side #lpanel{order:1}.side #zpanel{order:1}.side .filters{order:2}.side .list{order:3}.side #syp{order:4}.side #cmp{order:4}.side .foot{order:5}
+  .side .detail{order:1}.side #lpanel{order:1}.side #zpanel{order:1}.side #bpanel{order:1}.side .filters{order:2}.side .list{order:3}.side #syp{order:4}.side #cmp{order:4}.side .foot{order:5}
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -207,6 +207,21 @@ body.fsb{overflow:hidden}
 #zpanel .zrow .sm{font-size:11px;color:var(--muted)}
 #zpanel .zrow .zb{display:flex;gap:6px;flex-wrap:wrap}
 #zhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left;color:inherit}
+#bhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left;color:inherit}
+#brows .bt{overflow-x:auto;margin-top:8px}
+#brows table{border-collapse:collapse;font-size:12px;white-space:nowrap;width:100%}
+#brows th{font-weight:600;color:var(--muted);text-align:right;padding:4px 6px;border-bottom:1px solid var(--line)}
+#brows th:first-child,#brows td:first-child{text-align:left}
+#brows td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+#brows tr.br{cursor:pointer}
+#brows tr.br:hover td{background:color-mix(in srgb, var(--accent) 8%, transparent)}
+#brows tr.on td{background:color-mix(in srgb, var(--accent) 16%, transparent)}
+#brows .co{display:block;font-size:11px;color:var(--muted)}
+#brows .rk{color:var(--warn);font-weight:600}
+#brows .nt{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;white-space:normal}
+.tu{color:#15803d;font-weight:700}.td{color:#b42318;font-weight:700}.te{color:var(--muted)}
+.mk .l .tu,.mk .l .td{margin-left:2px}
+.spark{display:block;margin-top:2px}
 .zsel{background:var(--accent);color:#fff}
 #fsbtn{position:absolute;right:10px;top:10px;z-index:6}
 #locbtn{position:absolute;left:8px;bottom:4px;z-index:6}
@@ -247,7 +262,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.19 · 88</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.20 · 89</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -311,12 +326,14 @@ body.fsb{overflow:hidden}
     <div class="side">
       <div class="panel filters">
         <div class="group"><span class="lab">권역</span><div class="seg" id="fZone"></div></div>
+        <div class="group"><span class="lab">브랜드</span><div class="seg" id="fBrand"></div></div>
         <div class="group"><span class="lab">오픈업</span><div class="seg" id="fOu"></div></div>
         <div class="group"><span class="lab">방문</span><div class="seg" id="fVisit"></div></div>
       </div>
       <div class="panel detail" id="detail"></div>
       <div class="panel" id="lpanel" hidden><button type="button" id="lhead" aria-expanded="false"><span>부동산 매물 <span id="lcount"></span> <span class="sm">(확인된 매물)</span></span><span id="larr">▸</span></button><div id="lrows" hidden></div></div>
       <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>범위별 매출 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(그린 범위 안 매장 매출)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
+      <div class="panel" id="bpanel"><button type="button" id="bhead" aria-expanded="false"><span>브랜드 비교 <span id="bcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(선택한 권역 안 · 정보공개서 대조)</span></span><span id="barr">▸</span></button><div id="brows" hidden></div></div>
       <div class="panel list closed" id="listpanel">
         <div class="listhead" id="listhead" role="button" tabindex="0" aria-expanded="false" style="cursor:pointer"><span><span id="listCaret" style="display:inline-block;width:14px">▸</span>목록 <b id="lCount">0</b>곳 <span id="listHint" style="font-size:11px">(눌러서 펼치기)</span></span>
           <span class="sortrow"><label for="sort">정렬</label><select id="sort"><option value="zone">구역순</option><option value="rev">매출 높은 순</option><option value="near">가까운 순(내 위치)</option></select></span></div>
@@ -444,6 +461,48 @@ const AREAS = [["1","홍대 1 연남","#7557a8"],
 ["서강대","서강대","#269b37"]];
 DATA.forEach((d) => { if (d.z === "1" && /연희동/.test(d.j)) d.z = "1y"; });
 const AREAL = {}, AREAC = {}, AREAO = {}; AREAS.forEach((a, i) => { AREAL[a[0]] = a[1]; AREAC[a[0]] = a[2]; AREAO[a[0]] = i; });
+/* ---------- 브랜드 (공정위 정보공개서 26.10.19 조사 · 문서: 브랜드-정보공개서-분석) ----------
+   m: 서울 가맹점 월평균 매출(만원 = 연평균÷12) · cr: 폐점률 %((계약종료+해지)÷가맹점수) · cy: 기준연도
+   n/sn: 전국/서울 [전체, 가맹, 직영] · cost: 창업비(만원, 인테리어 포함·부스 포함 여부 미확인) · hq: 본사 실적 */
+const BRANDS = {
+  "모노맨션": { co: "(주)하임", m: 2046, cr: 3.7, cy: 2025, n: [82, 82, 0], sn: [33, 33, 0], cost: 17045, hq: "2025 매출 55억 · 영업이익 +2.9억" },
+  "포토이즘박스": { co: "(주)서북", m: 1986, cr: 3.8, cy: 2025, n: [470, 449, 21], sn: [104, 99, 5], cost: 9372, hq: "2025 매출 569억 · 영업손실 -74억", warn: "본사 적자" },
+  "포토이즘컬러드": { co: "(주)서북", m: 1942, cr: 14.3, cy: 2025, n: [82, 70, 12], sn: [21, 18, 3], cost: 9372, hq: "2025 매출 569억 · 영업손실 -74억", warn: "본사 적자" },
+  "포토이즘": { co: "(주)서북", m: null, cr: 35.7, cy: 2025, n: [16, 14, 2], sn: [2, 2, 0], cost: 9573, hq: "2025 매출 569억 · 영업손실 -74억", risk: "신규 개점 없음(축소 중)", note: "원조 브랜드 · 하위 브랜드 미확인 매장 포함" },
+  "포토그레이": { co: "(주)에이피알", m: 1861, cr: 7.5, cy: 2024, n: [154, 107, 47], sn: [40, 25, 15], cost: 17583, hq: "2024 매출 7,230억 · 영업이익 +1,184억", warn: "직영 비중 높음(서울 38%)" },
+  "포토시그니처": { co: "(주)이미지네트웍스플러스", m: 1843, cr: 27.6, cy: 2024, n: [175, 174, 1], sn: [30, 29, 1], cost: 15127, hq: "2024 매출 41억 · 영업손실 -3.8억", risk: "폐점률 높음" },
+  "픽닷": { co: "(주)에브리세컨드", m: 1005, cr: 2.3, cy: 2024, n: [48, 44, 4], sn: [25, 21, 4], cost: 11770, hq: "2024 매출 29억 · 영업이익 +1.4억" },
+  "하루필름": { co: "(주)에이치제이제이컴퍼니", m: 990, cr: 35.2, cy: 2025, n: [106, 91, 15], sn: [39, 33, 6], cost: 8130, hq: "2025 매출 56억 · 영업이익 +12억", risk: "폐점률 높음" },
+  "더필름": { co: "(주)열심히사는사람들", m: 777, cr: 88.2, cy: 2025, n: [17, 17, 0], sn: [8, 8, 0], cost: 15857, hq: "2025 매출 11억 · 영업이익 +0.9억", risk: "가맹점 대량 종료" },
+  "키픽": { co: "(주)열심히사는사람들", note: "더필름 자매 브랜드 · 정보공개서 상세 미확인" },
+  "BYTP": { co: "(주)열심히사는사람들", note: "더필름·키픽의 과거 브랜드(김기훈 대표 확인) · 가맹 등록 없음" },
+  "플랜비 스튜디오": { co: "(주)리오컴퍼니", m: 627, cr: 38.1, cy: 2025, n: [87, 84, 3], sn: [14, 14, 0], cost: 9507, hq: "2025 매출 143억 · 영업이익 +21억", risk: "폐점률 높음" },
+  "포토오브제": { co: "(주)리오컴퍼니", m: null, cr: 6.3, cy: 2025, n: [17, 16, 1], sn: [8, 7, 1], cost: 12474, hq: "2025 매출 143억 · 영업이익 +21억", note: "서울 평균매출 미기재" },
+  "인생네컷": { co: "(주)엘케이벤쳐스", m: 553, cr: 24.5, cy: 2025, n: [273, 261, 12], sn: [46, 38, 8], cost: 12795, hq: "2025 매출 127억 · 영업손실 -53억 · 자본잠식", risk: "자본잠식·폐점률 높음" },
+  "포토랩플러스": { co: "(주)티오피글로벌", m: 485, cr: 19.6, cy: 2025, n: [70, 46, 24], sn: [26, 14, 12], cost: 12190, hq: "2025 매출 39억 · 영업이익 +2.2억" },
+  "돈룩업": { co: "(주)디엘유", m: null, cr: 0, cy: 2024, n: [59, 56, 3], sn: [25, 22, 3], cost: 4240, hq: "2024 매출 35억 · 영업이익 +11억", note: "평균매출 미기재 · 창업비에 장비 별도 추정" },
+  "캠백": { co: "(주)디엘유", n: [0, 0, 0], cost: 4810, hq: "2025 매출 18억 · 영업이익 +1.4억", note: "2026.06 가맹 등록 · 정보공개서상 가맹점 0곳" },
+  "덥티": { co: "(주)언로그", n: [0, 0, 0], cost: 14080, note: "정보공개서상 가맹점 0곳 · 재무 미기재" },
+  "포토하임 네컷": { co: "(주)하임", note: "모노맨션 운영사의 자매 브랜드 · 상세 미확인" },
+  "미소포토부스": { co: "(주)티엠벤처스", note: "상세 미확인" },
+  "포토아이브": { co: "㈜리멤버러스", note: "상세 미확인" },
+  "포토스트리트": { co: "(주)웜브로", note: "상세 미확인" },
+  "픽스": { co: "픽스 홍대(개인사업자)", note: "2025.10 가맹 등록 · 상세 미확인" },
+  "모드빈티크": { note: "가맹 등록 없음" }, "포토에이스": { note: "가맹 등록 없음" }, "오토포토": { note: "가맹 등록 없음" }, "스티카": { note: "가맹 등록 없음" }
+};
+const BRAND_RE = [[/포토이즘\s?\(?박스/, "포토이즘박스"], [/포토이즘\s?\(?컬러드/, "포토이즘컬러드"], [/포토이즘/, "포토이즘"], [/포토그레이/, "포토그레이"], [/모노맨션/, "모노맨션"], [/하루필름/, "하루필름"], [/인생네컷/, "인생네컷"], [/픽닷/, "픽닷"], [/덥티/, "덥티"], [/포토\s?오브제/, "포토오브제"], [/포토시그니처/, "포토시그니처"], [/캠백/, "캠백"], [/모드빈티크/, "모드빈티크"], [/돈룩업/, "돈룩업"], [/더필름/, "더필름"], [/KIPIC|키픽/i, "키픽"], [/BYTP/i, "BYTP"], [/플랜비/, "플랜비 스튜디오"], [/포토랩플러스/, "포토랩플러스"], [/포토에이스/, "포토에이스"], [/오토포토/, "오토포토"], [/스티카/i, "스티카"], [/포토하임/, "포토하임 네컷"], [/미소포토/, "미소포토부스"], [/포토아이브/, "포토아이브"], [/포토스트리트/, "포토스트리트"], [/^픽스(\s|$)/, "픽스"]];
+const CAND = ["모노맨션", "포토이즘박스", "포토그레이"];
+function brandOf(n) { for (const [r, b] of BRAND_RE) if (r.test(n || "")) return b; return "기타"; }
+const bOf = (d) => d.b || (d.b = brandOf(d.n));
+// 매출 추이: 오픈업 12개월 그래프(0~100 상대값, 25.09→26.08). 최근 3개월(6~8월) 평균 vs 직전 3개월(3~5월) 평균
+function trendOf(d) {
+  const t = d.ox && d.ox.tr; if (!t || t.length !== 12) return null;
+  if (t[6] === 0 || t[7] === 0 || t[8] === 0) return { k: "new", t: "비교 불가(신규)" };
+  const a = (t[6] + t[7] + t[8]) / 3, b = (t[9] + t[10] + t[11]) / 3, r = Math.round((b / a - 1) * 100);
+  return { k: r >= 15 ? "up" : r <= -15 ? "dn" : "eq", r };
+}
+const TA = { up: "↑", dn: "↓", eq: "→" };
+const trendHtml = (tr) => !tr || tr.k === "new" ? "" : '<span class="' + (tr.k === "up" ? "tu" : tr.k === "dn" ? "td" : "te") + '">' + TA[tr.k] + "</span>";
 const ST = { ok: "상호·주소 일치", sim: "주소 일치·상호 유사", diff: "같은 주소, 상호 다름", none: "오픈업 미확인", ou: "오픈업에만 있음(네이버 저장 없음)" };
 const $ = (s) => document.querySelector(s);
 const fmt = (n) => n.toLocaleString("ko-KR");
@@ -490,7 +549,7 @@ DATA.forEach((d) => {
 const tier = (h) => h == null ? -1 : h <= 500 ? 0 : h <= 1500 ? 1 : h <= 3000 ? 2 : h <= 5000 ? 3 : 4;
 let selected = null, selectedL = null, map = null, markers = [];
 /* ---------- 필터·목록·상세 ---------- */
-const F = { zone: "all", ou: "all", visit: "all" };
+const F = { zone: "all", ou: "all", visit: "all", brand: "all" };
 const OPTS = {
   fOu: [["all", "전체"], ["has", "매출 확인"], ["none", "매출 없음(전체)"], ["unk", "미확인"], ["reg", "미등록"], ["hid", "비공개"], ["diff", "확인 필요"], ["ou", "오픈업에만"]],
   fVisit: [["all", "전체"], ["no", "아직"], ["yes", "방문함"]]
@@ -525,7 +584,51 @@ function passOu(d) {
 }
 const pass = (d) => (F.zone === "all" || d.z === F.zone)
   && passOu(d)
-  && (F.visit === "all" || (F.visit === "yes") === d.vis);
+  && (F.visit === "all" || (F.visit === "yes") === d.vis)
+  && passBrand(d);
+function passBrand(d) {
+  const f = F.brand; if (f === "all") return true; const b = bOf(d);
+  if (f === "cand") return CAND.includes(b);
+  if (f === "risk") return !!(BRANDS[b] && BRANDS[b].risk);
+  return b === f;
+}
+function buildBrand() {
+  const el = $("#fBrand"); if (!el) return; el.innerHTML = "";
+  const sel = document.createElement("select"); sel.setAttribute("aria-label", "브랜드");
+  const cnt = {}; DATA.forEach((d) => { const b = bOf(d); cnt[b] = (cnt[b] || 0) + 1; });
+  const opt = (v, t) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); };
+  opt("all", "전체 브랜드");
+  opt("cand", "후보 3 (모노맨션·포토이즘박스·포토그레이)");
+  opt("risk", "위험 브랜드 (폐점률·본사 재무)");
+  Object.keys(cnt).filter((b) => b !== "기타").sort((a, b) => cnt[b] - cnt[a]).forEach((b) => opt(b, b + " (" + cnt[b] + ")"));
+  if (cnt["기타"]) opt("기타", "기타 브랜드 (" + cnt["기타"] + ")");
+  sel.value = F.brand;
+  sel.onchange = () => { F.brand = sel.value; refresh(); fitFiltered(); };
+  el.appendChild(sel);
+}
+function bOpen(on) { $("#brows").hidden = !on; $("#barr").textContent = on ? "▾" : "▸"; $("#bhead").setAttribute("aria-expanded", String(on)); }
+function renderBrandPanel() {
+  const box = $("#brows"); if (!box) return;
+  const inZ = DATA.filter((d) => (F.zone === "all" || d.z === F.zone) && d.s !== "ou");
+  const g = {};
+  inZ.forEach((d) => { const b = bOf(d); const o = g[b] || (g[b] = { n: 0, v: [], up: 0, eq: 0, dn: 0 }); o.n++; if (d.cls === "closed") return; if (d.hi != null) o.v.push(d.hi); const t = trendOf(d); if (t && TA[t.k]) o[t.k]++; });
+  const med = (v) => { const a = [...v].sort((x, y) => x - y), m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  const rows = Object.entries(g).sort((a, b) => (a[0] === "기타") - (b[0] === "기타") || b[1].n - a[1].n);
+  $("#bcount").textContent = "(" + (F.zone === "all" ? "전체" : AREAL[F.zone]) + " · " + rows.length + "개)";
+  const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  let h = '<div class="bt"><table><tr><th>브랜드</th><th>매장</th><th>매출확인</th><th>오픈업 중앙값</th><th>추이 ↑/→/↓</th><th>정보공개서 서울</th><th>폐점률</th></tr>';
+  rows.forEach(([b, o]) => {
+    const bi = BRANDS[b] || {};
+    const flag = bi.risk ? '<span class="rk">⚠ ' + esc(bi.risk) + "</span>" : bi.warn ? '<span class="rk" style="font-weight:400">주의 · ' + esc(bi.warn) + "</span>" : "";
+    h += '<tr class="br' + (F.brand === b ? " on" : "") + '" data-b="' + esc(b) + '"><td>' + esc(b) + (CAND.includes(b) ? " ★" : "") + '<span class="co">' + esc(bi.co || (b === "기타" ? "개인·소규모 브랜드" : "운영사 미확인")) + (flag ? " · " + flag : "") + "</span></td>"
+      + "<td>" + o.n + "</td><td>" + o.v.length + "</td><td>" + (o.v.length ? fmt(Math.round(med(o.v))) + "만" + (o.v.length < 5 ? '<span class="co">표본 적음</span>' : "") : "—") + "</td>"
+      + "<td>" + (o.up + o.eq + o.dn ? '<span class="tu">' + o.up + '</span>/<span class="te">' + o.eq + '</span>/<span class="td">' + o.dn + "</span>" : "—") + "</td>"
+      + "<td>" + (bi.m ? fmt(bi.m) + "만" : "—") + "</td><td>" + (bi.cr != null && bi.n && bi.n[1] ? '<span class="' + (bi.cr >= 20 ? "rk" : "") + '">' + bi.cr + "%</span>" : "—") + "</td></tr>";
+  });
+  h += '</table></div><div class="nt">오픈업 중앙값 = 매출 확인 매장의 오픈업 상한값(만원/월) 중앙값, 폐업 매장 제외. 추이 = 최근 3개월(26.06~08) 평균이 직전 3개월(03~05)보다 15% 이상 오르면 ↑, 15% 이상 내리면 ↓. 정보공개서 서울 = 공정위 정보공개서의 서울 가맹점 연평균 매출 ÷ 12 (2024~2025년 기준). 폐점률 = (계약종료+해지) ÷ 가맹점수. ★ = 후보 브랜드. 행을 누르면 그 브랜드만 지도에 표시.</div>';
+  box.innerHTML = h;
+  box.querySelectorAll("tr.br").forEach((tr) => { tr.onclick = () => { const b = tr.dataset.b; F.brand = F.brand === b ? "all" : b; refresh(); fitFiltered(); }; });
+}
 const revText = (d) => d.hi == null ? "—" : d.rev.replace(/(\d+)/g, (m) => fmt(+m)).replace(/≤/g, "~").replace("~", " ~ ").trim();
 
 let me = null, meMarker = null;
@@ -610,7 +713,7 @@ function renderList() {
     { const z = b.querySelector(".zdot"); if (d.hi == null) { z.style.background = "transparent"; z.style.border = "2px dashed #8b97a1"; } else { const t = Math.pow(Math.min(1, (d.hi + 400) / 5000), 0.75); z.style.background = "color-mix(in srgb, #c62828 " + Math.round(t * 100) + "%, #ffffff)"; z.style.border = "1px solid rgba(198,40,40,.45)"; } }
     b.querySelector(".nm").textContent = d.n + (d.vis ? "  ✓" : "");
     b.querySelector(".rd").textContent = AREAL[d.z] + " · " + (d.r || "현장 추가") + (d.dist != null ? " · " + fmtDist(d.dist) : "");
-    const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.cls === "closed" ? "폐업 · " : "") + (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na");
+    const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.cls === "closed" ? "폐업 · " : "") + (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na"); else { const tr = trendOf(d); if (tr && TA[tr.k]) rv.insertAdjacentHTML("beforeend", " " + trendHtml(tr)); }
     b.onclick = () => select(d.id, true); box.appendChild(b);
   });
   if (!rows.length) box.innerHTML = '<div class="empty" style="padding:12px">조건에 맞는 매장이 없습니다.</div>';
@@ -633,7 +736,8 @@ function renderDetail() {
     else nw.remove(); }
   const bd = el.querySelector(".badges");
   const add = (t, c) => { const s = document.createElement("span"); s.className = "badge " + (c || ""); s.textContent = t; bd.appendChild(s); };
-  add(AREAL[d.z]); if (d.cls === "closed") add("폐업" + (d.cl ? " · " + d.cl.replace(/^(\d+)년 (\d+)월/, (a, y, m) => y + "." + m.padStart(2, "0")) : ""), "warn"); if (d.custom) add("현장 추가", "warn"); if (d.fo) add("(구)" + d.fo + (d.fc ? " · 변경 " + d.fc.replace(/^(\d+)년 (\d+)월/, (a, y, m) => y + "." + m.padStart(2, "0")) : "")); if (d.s !== "none") add(ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
+  add(AREAL[d.z]); { const bb = bOf(d), bi = BRANDS[bb]; if (bb !== "기타") add(bb + (CAND.includes(bb) ? " ★" : ""), CAND.includes(bb) ? "good" : ""); if (bi && bi.risk) add("⚠ " + bi.risk, "warn"); else if (bi && bi.warn) add("주의 · " + bi.warn, "warn"); }
+  if (d.cls === "closed") add("폐업" + (d.cl ? " · " + d.cl.replace(/^(\d+)년 (\d+)월/, (a, y, m) => y + "." + m.padStart(2, "0")) : ""), "warn"); if (d.custom) add("현장 추가", "warn"); if (d.fo) add("(구)" + d.fo + (d.fc ? " · 변경 " + d.fc.replace(/^(\d+)년 (\d+)월/, (a, y, m) => y + "." + m.padStart(2, "0")) : "")); if (d.s !== "none") add(ST[d.s], d.s === "diff" ? "warn" : (d.s === "ok" || d.s === "sim") ? "good" : "");
   const dl = el.querySelector("dl");
   const row = (a, b, cls) => { const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (cls) v.className = cls; dl.append(t, v); };
   if (d.custom && /^현장추가 /.test(d.j) && !d.r) {
@@ -648,6 +752,25 @@ function renderDetail() {
   else if (d.r) row("도로명", d.r); else row("주소", d.j);
   if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
   else row("오픈업", noneFull(d));
+  { const tr = trendOf(d), t12 = d.ox && d.ox.tr;
+    if (t12 && t12.length === 12) {
+      const t = document.createElement("dt"); t.textContent = "12개월 추이"; const v = document.createElement("dd");
+      const w = 132, hh = 28, bw = w / 12;
+      let svg = '<svg class="spark" width="' + w + '" height="' + hh + '" viewBox="0 0 ' + w + " " + hh + '" role="img" aria-label="25.09~26.08 월별 매출 상대 높이">';
+      t12.forEach((x, i) => { const bh = Math.max(1, x / 100 * (hh - 2)); svg += '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (hh - bh).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + (i >= 9 ? "var(--accent)" : "var(--muted)") + '" opacity="' + (i >= 9 ? 1 : 0.45) + '"></rect>'; });
+      svg += "</svg>";
+      v.innerHTML = (tr ? (tr.k === "new" ? "비교 불가 (신규 · 3~5월 매출 없음)" : trendHtml(tr) + " " + (tr.r > 0 ? "+" : "") + tr.r + "% <span style='font-size:11px;color:var(--muted)'>(6~8월 vs 3~5월)</span>") : "") + svg + "<span style='font-size:11px;color:var(--muted)'>25.09 → 26.08 · 막대 높이는 이 매장 최고월=100 기준</span>";
+      dl.append(t, v);
+    }
+    const bb = bOf(d), bi = BRANDS[bb];
+    if (bb !== "기타") {
+      row("브랜드·운영사", bb + (bi && bi.co ? " · " + bi.co : " · 운영사 미확인"));
+      if (bi && bi.n && bi.n[1]) row("정보공개서", (bi.m ? "서울 가맹 월평균 " + fmt(bi.m) + "만원 · " : "서울 평균매출 미기재 · ") + "폐점률 " + bi.cr + "% (" + bi.cy + ") · 전국 " + bi.n[0] + "곳(직영 " + bi.n[2] + ") · 서울 " + bi.sn[0] + "곳(직영 " + bi.sn[2] + ")");
+      if (bi && bi.cost) row("창업비", "약 " + (bi.cost >= 10000 ? Math.floor(bi.cost / 10000) + "억 " + fmt(bi.cost % 10000) : fmt(bi.cost)) + "만원 (인테리어 포함 · 부스 포함 여부 미확인)");
+      if (bi && bi.hq) row("본사 실적", bi.hq);
+      if (bi && bi.note) row("참고", bi.note);
+    }
+  }
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", kakao], ["네이버지도에서 검색", naver]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
   const cx = el.querySelector(".shc");
@@ -738,7 +861,7 @@ function iconHtml(d) {
   if (t < 0) c.push("none"); if (isNew(d)) c.push("nw"); else if (isStale(d)) c.push("old"); if (d.s === "diff") c.push("diff"); if (d.vis) c.push("vis"); if (d.s === "ou") c.push("ouonly"); if (d.cls === "closed") c.push("closed"); if (selected === d.id) c.push("sel");
   const bg = t < 0 ? "" : ' style="background:' + TC[t] + '"';
   const nm = d.n.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  return '<div class="' + c.join(" ") + '"><div class="d"' + bg + '></div><span class="l">' + nm + '</span></div>';
+  return '<div class="' + c.join(" ") + '"><div class="d"' + bg + '></div><span class="l">' + nm + (d.cls === "closed" ? "" : trendHtml(trendOf(d))) + '</span></div>';
 }
 function setIcon(id) { const m = markers[id]; if (m) m.setIcon({ content: iconHtml(DATA[id]), anchor: new naver.maps.Point(0, 0) }); }
 function hull(pts) {
@@ -771,7 +894,7 @@ function initMap() {
 }
 function applyFilter() { if (!map) return; DATA.forEach((d) => markers[d.id] && markers[d.id].setMap(pass(d) ? map : null)); }
 function refresh(all) {
-  buildArea(); ["fOu", "fVisit"].forEach(buildSeg);
+  buildArea(); buildBrand(); ["fOu", "fVisit"].forEach(buildSeg); renderBrandPanel();
   $("#cTotal").textContent = DATA.filter(d => d.s !== "ou").length;
   $("#cOu").textContent = DATA.filter(d => d.hi != null).length;
   $("#cOnly").textContent = DATA.filter(d => d.s === "ou").length;
@@ -1057,6 +1180,7 @@ function zShapeObj(z, col, dashed) {
 }
 function zOpen(on) { $("#zrows").hidden = !on; $("#zarr").textContent = on ? "▾" : "▸"; $("#zhead").setAttribute("aria-expanded", String(on)); }
 $("#zhead").onclick = () => zOpen($("#zrows").hidden);
+$("#bhead").onclick = () => bOpen($("#brows").hidden);
 function paintZones() {
   Object.values(zOv).forEach((o) => { try { o.s.setMap(null); } catch (e) {} }); zOv = {};
   const box = $("#zrows"); box.innerHTML = ""; $("#zcount").textContent = store.zones.length ? "(" + store.zones.length + ")" : "";
