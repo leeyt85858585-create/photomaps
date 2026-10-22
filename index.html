@@ -262,7 +262,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 99</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 100</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1169,23 +1169,63 @@ function renderListing(l, el) {
 }
 
 const FCOL = ["#c9d6e3", "#8fc1d9", "#f2d16b", "#f39c4a", "#e3562f", "#a8161b"], FW = [2, 3, 3.5, 4.5, 5.5, 7];
-let FDATA = null, FLINES = [];
-function fClear() { FLINES.forEach((l) => { try { l.setMap(null); } catch (e) {} }); FLINES = []; }
-function fDraw() {
-  fClear(); if (!$("#ftog").checked || !FDATA || !map || typeof naver === "undefined") return;
-  const k = +$("#fslot").value;
-  FDATA.r.forEach(([c, a]) => {
-    const v = +c[k]; let x = 0, y = 0; const path = [];
-    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; path.push(new naver.maps.LatLng(x / 1e5, y / 1e5)); }
-    FLINES.push(new naver.maps.Polyline({ map, path, strokeColor: FCOL[v], strokeWeight: FW[v], strokeOpacity: v ? 0.9 : 0.5, strokeLineCap: "round", clickable: false, zIndex: 3 + v }));
-  });
+let FDATA = null, FRUNS = null, FLINES = [], FOV = null, FIDLE = null;
+// 선 데이터를 한 번만 풀어 둠: [{c, la[], lo[], bbox}]
+function fPrep() {
+  FRUNS = FDATA.r.map(([c, a]) => { const la = [], lo = []; let x = 0, y = 0, n = 90, s = -90, w = 180, e = -180;
+    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; const p = x / 1e5, q = y / 1e5; la.push(p); lo.push(q); if (p < n) n = p; if (p > s) s = p; if (q < w) w = q; if (q > e) e = q; }
+    return { c, la, lo, n, s, w, e }; });
+}
+function fLegend(k) {
   const b = FDATA.br[k < 4 ? 0 : 1], lg = $("#flegend"); lg.innerHTML = "";
-  ["0", ...b.map((q) => String(Math.round(q)))].forEach((t, i) => { const s = document.createElement("span"); s.style.cssText = "flex:1;text-align:center;border-top:6px solid " + FCOL[i] + ";padding-top:2px"; s.textContent = t + (i === 5 ? "+" : ""); lg.appendChild(s); });
+  ["0", ...b.map((q) => String(Math.round(q)))].forEach((t, i) => { const sp = document.createElement("span"); sp.style.cssText = "flex:1;text-align:center;border-top:6px solid " + FCOL[i] + ";padding-top:2px"; sp.textContent = t + (i === 5 ? "+" : ""); lg.appendChild(sp); });
   const u = document.createElement("span"); u.textContent = "명/10m"; u.style.marginLeft = "4px"; lg.appendChild(u);
+}
+// 캔버스 오버레이: 지도 화면 크기 캔버스 한 장에 보이는 선만 그림 → 시간대 변경이 즉시 반영
+function fMakeOverlay() {
+  if (!(naver.maps.OverlayView)) return null;
+  function FO() { this.cv = document.createElement("canvas"); this.cv.style.cssText = "position:absolute;pointer-events:none"; }
+  FO.prototype = new naver.maps.OverlayView();
+  FO.prototype.onAdd = function () { this.getPanes().overlayLayer.appendChild(this.cv); };
+  FO.prototype.onRemove = function () { this.cv.remove(); };
+  FO.prototype.draw = function () {
+    const m = this.getMap(); if (!m || !FRUNS) return;
+    const pj = this.getProjection(), bd = m.getBounds(), sw = bd.getSW(), ne = bd.getNE();
+    const tl = pj.fromCoordToOffset(new naver.maps.LatLng(ne.lat(), sw.lng())), br = pj.fromCoordToOffset(new naver.maps.LatLng(sw.lat(), ne.lng()));
+    const W = Math.ceil(br.x - tl.x), H = Math.ceil(br.y - tl.y), dpr = window.devicePixelRatio || 1, cv = this.cv;
+    cv.style.left = tl.x + "px"; cv.style.top = tl.y + "px"; cv.style.width = W + "px"; cv.style.height = H + "px";
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = g.lineJoin = "round";
+    const k = +$("#fslot").value, z = m.getZoom(), sc = z >= 17 ? 1.4 : z >= 16 ? 1.1 : z >= 15 ? 0.9 : 0.6;
+    const S = sw.lat(), N = ne.lat(), Wl = sw.lng(), E = ne.lng();
+    // 투영은 두 기준점으로 선형 근사 (화면 범위가 좁아 오차 무시 가능)
+    const fx = (br.x - tl.x) / (E - Wl), fy = (br.y - tl.y) / (S - N);
+    for (let v = 0; v < 6; v++) {
+      g.beginPath(); g.strokeStyle = FCOL[v]; g.globalAlpha = v ? 0.9 : 0.5; g.lineWidth = FW[v] * sc;
+      for (const r of FRUNS) { if (+r.c[k] !== v || r.s < S || r.n > N || r.e < Wl || r.w > E) continue;
+        g.moveTo((r.lo[0] - Wl) * fx, (r.la[0] - N) * fy); for (let i = 1; i < r.la.length; i++) g.lineTo((r.lo[i] - Wl) * fx, (r.la[i] - N) * fy); }
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  };
+  return new FO();
+}
+function fClear() { FLINES.forEach((l) => { try { l.setMap(null); } catch (e) {} }); FLINES = []; if (FOV) FOV.setMap(null); if (FIDLE) { naver.maps.Event.removeListener(FIDLE); FIDLE = null; } }
+function fDraw() {
+  if (!FDATA || !map || typeof naver === "undefined") return;
+  const k = +$("#fslot").value; fLegend(k);
+  if (!$("#ftog").checked) { fClear(); return; }
+  if (FOV === null) FOV = fMakeOverlay() || false;
+  if (FOV) { if (!FOV.getMap()) { FOV.setMap(map); FIDLE = naver.maps.Event.addListener(map, "idle", () => FOV.draw()); } FOV.draw(); return; }
+  fClear(); // OverlayView 미지원 시 예전 방식
+  FDATA.r.forEach(([c, a]) => { const v = +c[k]; let x = 0, y = 0; const path = [];
+    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; path.push(new naver.maps.LatLng(x / 1e5, y / 1e5)); }
+    FLINES.push(new naver.maps.Polyline({ map, path, strokeColor: FCOL[v], strokeWeight: FW[v], strokeOpacity: v ? 0.9 : 0.5, strokeLineCap: "round", clickable: false, zIndex: 3 + v })); });
 }
 $("#ftog").onchange = async () => {
   const on = $("#ftog").checked; $("#fbox").hidden = !on;
-  if (on && !FDATA) { try { FDATA = await (await fetch("flow_hongdae.json?v=" + Date.now())).json(); } catch (e) { $("#flegend").textContent = "데이터를 불러오지 못했어"; return; } }
+  if (on && !FDATA) { try { FDATA = await (await fetch("flow_hongdae.json?v=" + Date.now())).json(); fPrep(); } catch (e) { $("#flegend").textContent = "데이터를 불러오지 못했어"; return; } }
+  if (!on) { fClear(); return; }
   fDraw();
 };
 $("#fslot").onchange = fDraw;
