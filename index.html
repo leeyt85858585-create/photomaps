@@ -262,7 +262,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 101</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 102</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -333,13 +333,14 @@ body.fsb{overflow:hidden}
       <div class="panel detail" id="detail"></div>
       <div class="panel" id="lpanel" hidden><button type="button" id="lhead" aria-expanded="false"><span>부동산 매물 <span id="lcount"></span> <span class="sm">(확인된 매물)</span></span><span id="larr">▸</span></button><div id="lrows" hidden></div></div>
       <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>범위별 매출 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(그린 범위 안 매장 매출)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
-      <div class="panel" id="fpanel"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="ftog" style="width:18px;height:18px">도로 유동인구 <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(추정 · 연남·홍대·상수·신촌 시범)</span></label>
+      <div class="panel" id="fpanel"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="ftog" style="width:18px;height:18px">도로 유동인구 <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(추정 · 확대했을 때 주요 권역만)</span></label>
         <div id="fbox" hidden style="margin-top:8px;font-size:13px">
           <div style="display:flex;gap:6px"><select id="ftgt" aria-label="대상" style="flex:1;min-width:0;padding:6px">
             <option value="3">10~30대 여성 + 외국인 관광객</option><option value="1">10~30대 여성 (내국인)</option><option value="2">외국인 관광객 (단기체류)</option><option value="0">전체 (내국인+외국인)</option>
           </select><select id="fslot" aria-label="시간" style="flex:1;min-width:0;padding:6px">
             <option value="0">주말 13~18시</option><option value="1">주말 18~22시</option><option value="2">금·토 22~24시</option><option value="3">평일 18~22시</option><option value="4">평일 15~18시</option>
           </select></div>
+          <div id="fnote" style="font-size:12px;color:var(--warn,#b45309);margin-top:6px"></div>
           <div id="flegend" style="display:flex;gap:2px;margin-top:6px;align-items:center;font-size:11px;color:var(--muted)"></div>
           <div style="font-size:11px;color:var(--muted);margin-top:4px">서울 생활인구(250m, 26.10 평일 6일·주말 4일, 내국인+외국인)를 도로 등급·주변 상가 수·지하철 출입구로 길에 나눠 배분한 추정치. 실측 아님. 외국인은 성별·연령 구분 없는 전체 인원.</div>
         </div></div>
@@ -1170,17 +1171,36 @@ function renderListing(l, el) {
 }
 
 const FCOL = ["#c9d6e3", "#8fc1d9", "#f2d16b", "#f39c4a", "#e3562f", "#a8161b"], FW = [2, 3, 3.5, 4.5, 5.5, 7];
-let FDATA = null, FRUNS = null, FLINES = [], FOV = null, FIDLE = null;
-// 선 데이터를 한 번만 풀어 둠: [{c, la[], lo[], bbox}]
-function fPrep() {
-  FRUNS = FDATA.r.map(([c, a]) => { const la = [], lo = []; let x = 0, y = 0, n = 90, s = -90, w = 180, e = -180;
+const FREG = /*FREG*/[{"g":"hongdae","n":"홍대·연남·신촌","bb":[37.5425,126.901,37.5725,126.937],"v":"584a8dc6"},{"g":"seongsu","n":"성수","bb":[37.5352,127.0344,37.5513,127.0664],"v":"ab9603e0"},{"g":"gangnam","n":"강남역","bb":[37.4958,127.0201,37.5061,127.0325],"v":"05b72dcc"},{"g":"jongno","n":"종로권","bb":[37.5612,126.9634,37.586,126.9981],"v":"fef936c4"},{"g":"yongsan","n":"용산권","bb":[37.5223,126.9583,37.55,127.0004],"v":"c1131801"},{"g":"hyehwa","n":"대학로","bb":[37.5767,126.9943,37.5875,127.009],"v":"2e8da615"},{"g":"konkuk","n":"건대","bb":[37.5359,127.0618,37.5603,127.0858],"v":"d2d6bac5"},{"g":"apgujeong","n":"압구정·가로수길","bb":[37.5137,127.0163,37.531,127.0441],"v":"94559ae0"},{"g":"mullae","n":"문래","bb":[37.509,126.8878,37.518,126.8998],"v":"60a3a293"},{"g":"songri","n":"송리단길","bb":[37.5038,127.1024,37.519,127.1153],"v":"9901eb34"},{"g":"magok","n":"마곡","bb":[37.5553,126.8302,37.5641,126.8427],"v":"2a68bc1f"}]/*FREG*/, FBR = /*FBR*/[[4.65,7.7,11.69,18.14,29.08],[1.08,1.85,2.99,5.07,8.98],[0.08,0.18,0.35,0.83,1.86],[1.2,2.07,3.36,5.8,10.51]]/*FBR*/, FZMIN = 15;
+let FRUNS = [], FLOADED = {}, FLINES = [], FOV = null, FIDLE = null;
+// 권역 파일을 풀어 FRUNS에 추가: {c, la[], lo[], bbox}
+function fPrep(d) {
+  d.r.forEach(([c, a]) => { const la = [], lo = []; let x = 0, y = 0, n = 90, s = -90, w = 180, e = -180;
     for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; const p = x / 1e5, q = y / 1e5; la.push(p); lo.push(q); if (p < n) n = p; if (p > s) s = p; if (q < w) w = q; if (q > e) e = q; }
-    return { c, la, lo, n, s, w, e }; });
+    FRUNS.push({ c, la, lo, n, s, w, e }); });
 }
 function fLegend(k) {
-  const b = FDATA.br[Math.floor(k / 5)], lg = $("#flegend"); lg.innerHTML = "";
+  const lg = $("#flegend"); lg.innerHTML = ""; const b = FBR[Math.floor(k / 5)]; if (!b) return;
   ["0", ...b.map((q) => String(Math.round(q)))].forEach((t, i) => { const sp = document.createElement("span"); sp.style.cssText = "flex:1;text-align:center;border-top:6px solid " + FCOL[i] + ";padding-top:2px"; sp.textContent = t + (i === 5 ? "+" : ""); lg.appendChild(sp); });
   const u = document.createElement("span"); u.textContent = "명/10m"; u.style.marginLeft = "4px"; lg.appendChild(u);
+}
+function fNote() {
+  const el = $("#fnote"); if (!el || !map) return; const z = map.getZoom();
+  if (z < FZMIN) { el.textContent = "지도를 더 확대하면 보여요"; return; }
+  const v = fView(); const any = v && FREG.some((r) => fHit(r.bb, v));
+  el.textContent = any ? "" : "이 화면에는 도로 유동인구 권역이 없어요 (" + FREG.map((r) => r.n).join(", ") + ")";
+}
+function fView() { try { const bd = map.getBounds(), sw = bd.getSW(), ne = bd.getNE(); return [sw.lat(), sw.lng(), ne.lat(), ne.lng()]; } catch (e) { return null; } }
+function fHit(bb, v) { return !(bb[2] < v[0] || bb[0] > v[2] || bb[3] < v[1] || bb[1] > v[3]); }
+// 보이는 권역 파일만 받아옴 (확대했을 때만)
+async function fEnsure() {
+  if (!$("#ftog").checked || !map || map.getZoom() < FZMIN) return;
+  const v = fView(); if (!v) return;
+  const need = FREG.filter((r) => fHit(r.bb, v) && !FLOADED[r.g]);
+  if (!need.length) return;
+  need.forEach((r) => { FLOADED[r.g] = "loading"; });
+  await Promise.all(need.map(async (r) => { try { fPrep(await (await fetch("flow_" + r.g + ".json?v=" + r.v)).json()); FLOADED[r.g] = 1; } catch (e) { FLOADED[r.g] = 0; } }));
+  fDraw();
 }
 // 캔버스 오버레이: 지도 화면 크기 캔버스 한 장에 보이는 선만 그림 → 시간대 변경이 즉시 반영
 function fMakeOverlay() {
@@ -1190,14 +1210,15 @@ function fMakeOverlay() {
   FO.prototype.onAdd = function () { this.getPanes().overlayLayer.appendChild(this.cv); };
   FO.prototype.onRemove = function () { this.cv.remove(); };
   FO.prototype.draw = function () {
-    const m = this.getMap(); if (!m || !FRUNS) return;
+    const m = this.getMap(); if (!m) return;
     const pj = this.getProjection(), bd = m.getBounds(), sw = bd.getSW(), ne = bd.getNE();
     const tl = pj.fromCoordToOffset(new naver.maps.LatLng(ne.lat(), sw.lng())), br = pj.fromCoordToOffset(new naver.maps.LatLng(sw.lat(), ne.lng()));
     const W = Math.ceil(br.x - tl.x), H = Math.ceil(br.y - tl.y), dpr = window.devicePixelRatio || 1, cv = this.cv;
     cv.style.left = tl.x + "px"; cv.style.top = tl.y + "px"; cv.style.width = W + "px"; cv.style.height = H + "px";
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
     const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = g.lineJoin = "round";
-    const k = fK(), z = m.getZoom(), sc = z >= 17 ? 1.4 : z >= 16 ? 1.1 : z >= 15 ? 0.9 : 0.6;
+    const z = m.getZoom(); if (z < FZMIN) return;
+    const k = fK(), sc = z >= 17 ? 1.4 : z >= 16 ? 1.1 : 0.9;
     const S = sw.lat(), N = ne.lat(), Wl = sw.lng(), E = ne.lng();
     // 투영은 두 기준점으로 선형 근사 (화면 범위가 좁아 오차 무시 가능)
     const fx = (br.x - tl.x) / (E - Wl), fy = (br.y - tl.y) / (S - N);
@@ -1213,21 +1234,20 @@ function fMakeOverlay() {
 }
 function fClear() { FLINES.forEach((l) => { try { l.setMap(null); } catch (e) {} }); FLINES = []; if (FOV) FOV.setMap(null); if (FIDLE) { naver.maps.Event.removeListener(FIDLE); FIDLE = null; } }
 function fDraw() {
-  if (!FDATA || !map || typeof naver === "undefined") return;
+  if (!map || typeof naver === "undefined") return;
   const k = fK(); fLegend(k);
   if (!$("#ftog").checked) { fClear(); return; }
+  fNote();
   if (FOV === null) FOV = fMakeOverlay() || false;
-  if (FOV) { if (!FOV.getMap()) { FOV.setMap(map); FIDLE = naver.maps.Event.addListener(map, "idle", () => FOV.draw()); } FOV.draw(); return; }
-  fClear(); // OverlayView 미지원 시 예전 방식
-  FDATA.r.forEach(([c, a]) => { const v = +c[k]; let x = 0, y = 0; const path = [];
-    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; path.push(new naver.maps.LatLng(x / 1e5, y / 1e5)); }
+  if (FOV) { if (!FOV.getMap()) { FOV.setMap(map); FIDLE = naver.maps.Event.addListener(map, "idle", () => { fNote(); FOV.draw(); fEnsure(); }); } FOV.draw(); return; }
+  fClear(); if (map.getZoom() < FZMIN) return; // OverlayView 미지원 시 예전 방식
+  FRUNS.forEach((r) => { const v = +r.c[k]; const path = r.la.map((p, i) => new naver.maps.LatLng(p, r.lo[i]));
     FLINES.push(new naver.maps.Polyline({ map, path, strokeColor: FCOL[v], strokeWeight: FW[v], strokeOpacity: v ? 0.9 : 0.5, strokeLineCap: "round", clickable: false, zIndex: 3 + v })); });
 }
 $("#ftog").onchange = async () => {
   const on = $("#ftog").checked; $("#fbox").hidden = !on;
-  if (on && !FDATA) { try { FDATA = await (await fetch("flow_hongdae.json?v=" + Date.now())).json(); fPrep(); } catch (e) { $("#flegend").textContent = "데이터를 불러오지 못했어"; return; } }
   if (!on) { fClear(); return; }
-  fDraw();
+  fDraw(); await fEnsure();
 };
 $("#fslot").onchange = fDraw; $("#ftgt").onchange = fDraw;
 function fK() { return +$("#ftgt").value * 5 + +$("#fslot").value; }
