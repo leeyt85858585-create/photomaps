@@ -262,7 +262,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 91</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 92</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -876,9 +876,12 @@ function initMap() {
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
     const h = hull(pts); if (h.length < 3) return;
     const top = h.reduce((a, p) => p.y > a.y ? p : a, h[0]);
-    ZP[z] = { label,
-      poly: new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], strokeWeight: 2.5, strokeOpacity: 0.8, clickable: false }),
-      lab: new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: "", anchor: new naver.maps.Point(0, 0) } }) };
+    try {
+      const esc = String(label).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      ZP[z] = { label,
+        poly: new naver.maps.Polygon({ map, paths: [h.map(p => new naver.maps.LatLng(p.y, p.x))], fillColor: "#6f7e8a", fillOpacity: 0.04, strokeColor: "#6f7e8a", strokeOpacity: 0.8, strokeWeight: 2.5, strokeStyle: "solid", clickable: false }),
+        lab: new naver.maps.Marker({ map, position: new naver.maps.LatLng(top.y, top.x), clickable: false, icon: { content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + esc + "</div>", anchor: new naver.maps.Point(0, 0) } }) };
+    } catch (e) {}
   });
   DATA.forEach((d) => {
     const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.mla, d.mlo), icon: { content: iconHtml(d), anchor: new naver.maps.Point(0, 0) }, zIndex: (isNew(d) || isStale(d)) ? 12 : 10 });
@@ -896,7 +899,7 @@ function paintAreas() {
   if (!map) return;
   const narrowed = F.brand !== "all" || F.ou !== "all" || F.visit !== "all";
   const bname = F.brand === "all" ? "" : F.brand === "cand" ? "후보 3" : F.brand === "risk" ? "위험 브랜드" : F.brand;
-  Object.entries(ZP).forEach(([z, o]) => {
+  Object.entries(ZP).forEach(([z, o]) => { try {
     const all = DATA.filter((d) => d.z === z), rows = narrowed ? all.filter(pass) : all;
     const show = rows.length > 0 && (F.zone === "all" || F.zone === z);
     o.poly.setMap(show ? map : null); o.lab.setMap(show ? map : null); if (!show) return;
@@ -907,9 +910,9 @@ function paintAreas() {
     const stat = avg == null ? " · 매출 미확인" : " · 평균 " + Math.round(avg).toLocaleString() + "만 (중앙값 " + Math.round(med).toLocaleString() + ")";
     const txt = narrowed ? o.label + " · " + (bname ? bname + " " : "") + rows.length + "곳" + stat : o.label + stat;
     o.lab.setIcon({ content: '<div class="zl" style="color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff">' + txt.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "</div>", anchor: new naver.maps.Point(0, 0) });
-  });
+  } catch (e) { console.warn("area", z, e); } });
 }
-function applyFilter() { if (!map) return; DATA.forEach((d) => markers[d.id] && markers[d.id].setMap(pass(d) ? map : null)); paintAreas(); }
+function applyFilter() { if (!map) return; DATA.forEach((d) => markers[d.id] && markers[d.id].setMap(pass(d) ? map : null)); try { paintAreas(); } catch (e) { console.warn("paintAreas", e); } }
 function refresh(all) {
   buildArea(); buildBrand(); ["fOu", "fVisit"].forEach(buildSeg); renderBrandPanel();
   $("#cTotal").textContent = DATA.filter(d => d.s !== "ou").length;
