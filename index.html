@@ -262,7 +262,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 100</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.22 · 101</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -335,12 +335,13 @@ body.fsb{overflow:hidden}
       <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>범위별 매출 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(그린 범위 안 매장 매출)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
       <div class="panel" id="fpanel"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="ftog" style="width:18px;height:18px">도로 유동인구 <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(추정 · 연남·홍대·상수·신촌 시범)</span></label>
         <div id="fbox" hidden style="margin-top:8px;font-size:13px">
-          <select id="fslot" aria-label="시간대" style="width:100%;padding:6px">
-            <option value="0">주말 14~18시 · 전체</option><option value="1">주말 18~22시 · 전체</option><option value="2">평일 14~18시 · 전체</option><option value="3">평일 18~22시 · 전체</option>
-            <option value="4">주말 14~18시 · 10~20대</option><option value="5">주말 18~22시 · 10~20대</option><option value="6">평일 14~18시 · 10~20대</option><option value="7">평일 18~22시 · 10~20대</option>
-          </select>
+          <div style="display:flex;gap:6px"><select id="ftgt" aria-label="대상" style="flex:1;min-width:0;padding:6px">
+            <option value="3">10~30대 여성 + 외국인 관광객</option><option value="1">10~30대 여성 (내국인)</option><option value="2">외국인 관광객 (단기체류)</option><option value="0">전체 (내국인+외국인)</option>
+          </select><select id="fslot" aria-label="시간" style="flex:1;min-width:0;padding:6px">
+            <option value="0">주말 13~18시</option><option value="1">주말 18~22시</option><option value="2">금·토 22~24시</option><option value="3">평일 18~22시</option><option value="4">평일 15~18시</option>
+          </select></div>
           <div id="flegend" style="display:flex;gap:2px;margin-top:6px;align-items:center;font-size:11px;color:var(--muted)"></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">서울 생활인구(250m, 26.10 7일)를 도로 등급·주변 상가 수·지하철 출입구로 길에 나눠 배분한 추정치. 실측 아님.</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">서울 생활인구(250m, 26.10 평일 6일·주말 4일, 내국인+외국인)를 도로 등급·주변 상가 수·지하철 출입구로 길에 나눠 배분한 추정치. 실측 아님. 외국인은 성별·연령 구분 없는 전체 인원.</div>
         </div></div>
       <div class="panel" id="bpanel"><button type="button" id="bhead" aria-expanded="false"><span>브랜드 비교 <span id="bcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(선택한 권역 안 · 정보공개서 대조)</span></span><span id="barr">▸</span></button><div id="brows" hidden></div></div>
       <div class="panel list closed" id="listpanel">
@@ -1177,7 +1178,7 @@ function fPrep() {
     return { c, la, lo, n, s, w, e }; });
 }
 function fLegend(k) {
-  const b = FDATA.br[k < 4 ? 0 : 1], lg = $("#flegend"); lg.innerHTML = "";
+  const b = FDATA.br[Math.floor(k / 5)], lg = $("#flegend"); lg.innerHTML = "";
   ["0", ...b.map((q) => String(Math.round(q)))].forEach((t, i) => { const sp = document.createElement("span"); sp.style.cssText = "flex:1;text-align:center;border-top:6px solid " + FCOL[i] + ";padding-top:2px"; sp.textContent = t + (i === 5 ? "+" : ""); lg.appendChild(sp); });
   const u = document.createElement("span"); u.textContent = "명/10m"; u.style.marginLeft = "4px"; lg.appendChild(u);
 }
@@ -1196,7 +1197,7 @@ function fMakeOverlay() {
     cv.style.left = tl.x + "px"; cv.style.top = tl.y + "px"; cv.style.width = W + "px"; cv.style.height = H + "px";
     if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
     const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H); g.lineCap = g.lineJoin = "round";
-    const k = +$("#fslot").value, z = m.getZoom(), sc = z >= 17 ? 1.4 : z >= 16 ? 1.1 : z >= 15 ? 0.9 : 0.6;
+    const k = fK(), z = m.getZoom(), sc = z >= 17 ? 1.4 : z >= 16 ? 1.1 : z >= 15 ? 0.9 : 0.6;
     const S = sw.lat(), N = ne.lat(), Wl = sw.lng(), E = ne.lng();
     // 투영은 두 기준점으로 선형 근사 (화면 범위가 좁아 오차 무시 가능)
     const fx = (br.x - tl.x) / (E - Wl), fy = (br.y - tl.y) / (S - N);
@@ -1213,7 +1214,7 @@ function fMakeOverlay() {
 function fClear() { FLINES.forEach((l) => { try { l.setMap(null); } catch (e) {} }); FLINES = []; if (FOV) FOV.setMap(null); if (FIDLE) { naver.maps.Event.removeListener(FIDLE); FIDLE = null; } }
 function fDraw() {
   if (!FDATA || !map || typeof naver === "undefined") return;
-  const k = +$("#fslot").value; fLegend(k);
+  const k = fK(); fLegend(k);
   if (!$("#ftog").checked) { fClear(); return; }
   if (FOV === null) FOV = fMakeOverlay() || false;
   if (FOV) { if (!FOV.getMap()) { FOV.setMap(map); FIDLE = naver.maps.Event.addListener(map, "idle", () => FOV.draw()); } FOV.draw(); return; }
@@ -1228,7 +1229,8 @@ $("#ftog").onchange = async () => {
   if (!on) { fClear(); return; }
   fDraw();
 };
-$("#fslot").onchange = fDraw;
+$("#fslot").onchange = fDraw; $("#ftgt").onchange = fDraw;
+function fK() { return +$("#ftgt").value * 5 + +$("#fslot").value; }
 let lastL = 0;
 $("#lhead").onclick = () => lOpen($("#lrows").hidden);
 async function loadListings(force) {
