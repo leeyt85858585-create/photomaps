@@ -333,6 +333,15 @@ body.fsb{overflow:hidden}
       <div class="panel detail" id="detail"></div>
       <div class="panel" id="lpanel" hidden><button type="button" id="lhead" aria-expanded="false"><span>부동산 매물 <span id="lcount"></span> <span class="sm">(확인된 매물)</span></span><span id="larr">▸</span></button><div id="lrows" hidden></div></div>
       <div class="panel" id="zpanel"><button type="button" id="zhead" aria-expanded="false"><span>범위별 매출 <span id="zcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(그린 범위 안 매장 매출)</span></span><span id="zarr">▸</span></button><div id="zrows" hidden></div></div>
+      <div class="panel" id="fpanel"><label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="ftog" style="width:18px;height:18px">도로 유동인구 <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(추정 · 연남·홍대·상수·신촌 시범)</span></label>
+        <div id="fbox" hidden style="margin-top:8px;font-size:13px">
+          <select id="fslot" aria-label="시간대" style="width:100%;padding:6px">
+            <option value="0">주말 14~18시 · 전체</option><option value="1">주말 18~22시 · 전체</option><option value="2">평일 14~18시 · 전체</option><option value="3">평일 18~22시 · 전체</option>
+            <option value="4">주말 14~18시 · 10~20대</option><option value="5">주말 18~22시 · 10~20대</option><option value="6">평일 14~18시 · 10~20대</option><option value="7">평일 18~22시 · 10~20대</option>
+          </select>
+          <div id="flegend" style="display:flex;gap:2px;margin-top:6px;align-items:center;font-size:11px;color:var(--muted)"></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">서울 생활인구(250m, 26.10 7일)를 도로 등급·주변 상가 수·지하철 출입구로 길에 나눠 배분한 추정치. 실측 아님.</div>
+        </div></div>
       <div class="panel" id="bpanel"><button type="button" id="bhead" aria-expanded="false"><span>브랜드 비교 <span id="bcount"></span> <span class="sm" style="font-weight:400;font-size:11px;color:var(--muted)">(선택한 권역 안 · 정보공개서 대조)</span></span><span id="barr">▸</span></button><div id="brows" hidden></div></div>
       <div class="panel list closed" id="listpanel">
         <div class="listhead" id="listhead" role="button" tabindex="0" aria-expanded="false" style="cursor:pointer"><span><span id="listCaret" style="display:inline-block;width:14px">▸</span>목록 <b id="lCount">0</b>곳 <span id="listHint" style="font-size:11px">(눌러서 펼치기)</span></span>
@@ -1158,6 +1167,28 @@ function renderListing(l, el) {
   if (l.approx) { const m = document.createElement("div"); m.style.cssText = "font-size:12px;color:var(--muted);margin-top:6px"; m.textContent = "※ 정확한 주소 변환이 안 돼 근처 매장 위치로 대략 표시했습니다."; el.appendChild(m); }
   if (!l.la) { const m = document.createElement("div"); m.className = "msg"; m.style.cssText = "font-size:12px;color:#b42318;margin-top:6px"; m.textContent = "지도 위치를 찾지 못해 표시하지 못했습니다 (주소 변환 실패)."; el.appendChild(m); }
 }
+
+const FCOL = ["#c9d6e3", "#8fc1d9", "#f2d16b", "#f39c4a", "#e3562f", "#a8161b"], FW = [2, 3, 3.5, 4.5, 5.5, 7];
+let FDATA = null, FLINES = [];
+function fClear() { FLINES.forEach((l) => { try { l.setMap(null); } catch (e) {} }); FLINES = []; }
+function fDraw() {
+  fClear(); if (!$("#ftog").checked || !FDATA || !map || typeof naver === "undefined") return;
+  const k = +$("#fslot").value;
+  FDATA.r.forEach(([c, a]) => {
+    const v = +c[k]; let x = 0, y = 0; const path = [];
+    for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; path.push(new naver.maps.LatLng(x / 1e5, y / 1e5)); }
+    FLINES.push(new naver.maps.Polyline({ map, path, strokeColor: FCOL[v], strokeWeight: FW[v], strokeOpacity: v ? 0.9 : 0.5, strokeLineCap: "round", clickable: false, zIndex: 3 + v }));
+  });
+  const b = FDATA.br[k < 4 ? 0 : 1], lg = $("#flegend"); lg.innerHTML = "";
+  ["0", ...b.map((q) => String(Math.round(q)))].forEach((t, i) => { const s = document.createElement("span"); s.style.cssText = "flex:1;text-align:center;border-top:6px solid " + FCOL[i] + ";padding-top:2px"; s.textContent = t + (i === 5 ? "+" : ""); lg.appendChild(s); });
+  const u = document.createElement("span"); u.textContent = "명/10m"; u.style.marginLeft = "4px"; lg.appendChild(u);
+}
+$("#ftog").onchange = async () => {
+  const on = $("#ftog").checked; $("#fbox").hidden = !on;
+  if (on && !FDATA) { try { FDATA = await (await fetch("flow_hongdae.json?v=" + Date.now())).json(); } catch (e) { $("#flegend").textContent = "데이터를 불러오지 못했어"; return; } }
+  fDraw();
+};
+$("#fslot").onchange = fDraw;
 let lastL = 0;
 $("#lhead").onclick = () => lOpen($("#lrows").hidden);
 async function loadListings(force) {
