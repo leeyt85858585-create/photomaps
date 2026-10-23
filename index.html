@@ -270,7 +270,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 107</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 108</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -679,10 +679,10 @@ async function shrink(file, max) {
   try { const bmp = await createImageBitmap(file); const sc = Math.min(1, max / Math.max(bmp.width, bmp.height)); const c = document.createElement("canvas"); c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height); return await new Promise((r) => c.toBlob((b) => r(b || file), "image/jpeg", 0.82)); } catch (e) { return file; }
 }
 function revokeThumbs() { thumbUrls.forEach((u) => { try { URL.revokeObjectURL(u); } catch (e) {} }); thumbUrls = []; }
-async function renderPhotos(d, box) {
+async function renderPhotos(d, box, o) {
   box.innerHTML = ""; revokeThumbs();
-  const k = skey(d), row = document.createElement("div"); row.className = "thumbs";
-  const mkIn = (cap) => { const i = document.createElement("input"); i.type = "file"; i.accept = "image/*"; if (cap) i.setAttribute("capture", "environment"); else i.multiple = true; i.hidden = true; i.onchange = async () => { const fs = [...i.files]; i.value = ""; for (const f of fs) { try { await addPhoto(k, await shrink(f, 1600)); } catch (e) { box.insertAdjacentHTML("beforeend", '<div class="empty">사진을 저장하지 못했습니다(저장 공간·브라우저 설정 확인)</div>'); } } if (selected != null && skey(DATA[selected]) === k) renderPhotos(d, box); }; return i; };
+  const k = o ? o.k : skey(d), cur = o ? o.cur : () => selected != null && skey(DATA[selected]) === k, row = document.createElement("div"); row.className = "thumbs";
+  const mkIn = (cap) => { const i = document.createElement("input"); i.type = "file"; i.accept = "image/*"; if (cap) i.setAttribute("capture", "environment"); else i.multiple = true; i.hidden = true; i.onchange = async () => { const fs = [...i.files]; i.value = ""; for (const f of fs) { try { await addPhoto(k, await shrink(f, 1600)); } catch (e) { box.insertAdjacentHTML("beforeend", '<div class="empty">사진을 저장하지 못했습니다(저장 공간·브라우저 설정 확인)</div>'); } } if (cur()) renderPhotos(d, box, o); }; return i; };
   const bar = document.createElement("div"); bar.className = "sh3";
   const cam = mkIn(true), alb = mkIn(false);
   const b1 = document.createElement("button"); b1.type = "button"; b1.textContent = "📷 촬영"; b1.onclick = () => cam.click();
@@ -690,8 +690,8 @@ async function renderPhotos(d, box) {
   bar.append(b1, b2, cam, alb); box.appendChild(bar); box.appendChild(row); row.style.marginTop="8px";
   try {
     const list = (await photosOf(k)).sort((a, b) => a.t - b.t);
-    if (selected == null || skey(DATA[selected]) !== k) return;
-    list.forEach((p) => { const u = URL.createObjectURL(p.blob); thumbUrls.push(u); const w = document.createElement("div"); w.className = "thw"; const t = document.createElement("button"); t.type = "button"; t.className = "th"; t.setAttribute("aria-label", "사진 보기"); const im = document.createElement("img"); im.src = u; im.alt = ""; t.appendChild(im); t.onclick = () => openViewer(d, p, () => renderPhotos(d, box)); const x = document.createElement("button"); x.type = "button"; x.className = "thx"; x.textContent = "×"; x.setAttribute("aria-label", "사진 삭제"); let armed = false; x.onclick = async () => { if (!armed) { armed = true; x.textContent = "삭제?"; x.classList.add("arm"); setTimeout(() => { armed = false; x.textContent = "×"; x.classList.remove("arm"); }, 3000); return; } try { await delPhoto(p.id); } catch (e) {} renderPhotos(d, box); }; w.append(t, x); row.appendChild(w); });
+    if (!cur()) return;
+    list.forEach((p) => { const u = URL.createObjectURL(p.blob); thumbUrls.push(u); const w = document.createElement("div"); w.className = "thw"; const t = document.createElement("button"); t.type = "button"; t.className = "th"; t.setAttribute("aria-label", "사진 보기"); const im = document.createElement("img"); im.src = u; im.alt = ""; t.appendChild(im); t.onclick = () => openViewer(d, p, () => renderPhotos(d, box, o)); const x = document.createElement("button"); x.type = "button"; x.className = "thx"; x.textContent = "×"; x.setAttribute("aria-label", "사진 삭제"); let armed = false; x.onclick = async () => { if (!armed) { armed = true; x.textContent = "삭제?"; x.classList.add("arm"); setTimeout(() => { armed = false; x.textContent = "×"; x.classList.remove("arm"); }, 3000); return; } try { await delPhoto(p.id); } catch (e) {} renderPhotos(d, box, o); }; w.append(t, x); row.appendChild(w); });
     if (list.length) b1.textContent = "📷 촬영 (" + list.length + ")";
   } catch (e) { row.insertAdjacentHTML("beforeend", '<div class="empty">이 브라우저에서는 사진 저장을 쓸 수 없습니다</div>'); }
 }
@@ -1259,9 +1259,12 @@ function selectListing(i) {
   const l = LIST[i]; try { if (map && l.la) { map.setZoom(Math.max(map.getZoom(), 17)); map.panTo(new naver.maps.LatLng(l.la, l.lo)); } } catch (e) {}
   if (window.innerWidth <= 920 && !fsOn()) { try { document.querySelector(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
 }
+// 매물 사진 키: 현장 등록 매물은 고유 id(수정·이동해도 유지), 매물DB 매물은 주소
+const lPhotoKey = (l) => l.field ? "매물|" + l.fid : "매물|DB:" + l.addr;
 function renderListing(l, el) {
-  el.innerHTML = '<h2></h2><div class="badges"></div><dl></dl><div class="links"></div>';
+  el.innerHTML = '<h2></h2><div class="badges"></div><dl></dl><div class="links"></div><div class="shp" style="margin-top:10px"></div>';
   el.querySelector("h2").textContent = l.name;
+  { const pk = lPhotoKey(l); renderPhotos({ n: "매물 " + l.name }, el.querySelector(".shp"), { k: pk, cur: () => selectedL != null && LIST[selectedL] && lPhotoKey(LIST[selectedL]) === pk }); }
   const bd = el.querySelector(".badges"); [["부동산 매물", "warn"], [l.status || "", ""], [l.area || "", ""]].forEach(([t, c]) => { if (!t) return; const s = document.createElement("span"); s.className = "badge " + c; s.textContent = t; bd.appendChild(s); });
   const dl = el.querySelector("dl"), row = (a, b, c) => { if (b === "" || b == null) b = "미확인"; const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (c) v.className = c; dl.append(t, v); };
   if (l.field) { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("등록일", l.date + (l.agent ? " · " + l.agent : "")); row("기타 사항", l.note); }
@@ -1515,7 +1518,8 @@ function b64(blob) { return new Promise((res, rej) => { const f = new FileReader
 async function syFlushPhotos() {
   const db = await idb(); const all = await idbReq(db.transaction("p").objectStore("p").getAll());
   for (const p of all) {
-    if (p.up) continue; const i = p.k.indexOf("|"), addr = p.k.slice(0, i), name = p.k.slice(i + 1);
+    if (p.up) continue; const i = p.k.indexOf("|"); let addr = p.k.slice(0, i), name = p.k.slice(i + 1);
+    if (p.k.startsWith("매물|")) { const l = LIST.find((x) => lPhotoKey(x) === p.k); name = "매물 " + (l ? l.name : name.replace(/^DB:/, "")); addr = l ? l.addr : name; }
     await syPost({ action: "photo", key: p.k, name, addr, fname: new Date(p.t).toISOString().slice(0, 10) + "_" + name.replace(/[^\w가-힣]+/g, "_") + "_" + p.t + ".jpg", data: await b64(p.blob) });
     p.up = 1; await idbReq(db.transaction("p", "readwrite").objectStore("p").put(p));
   }
