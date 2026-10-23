@@ -270,7 +270,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 105</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 106</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -315,7 +315,7 @@ body.fsb{overflow:hidden}
         </div>
         </div>
         <button id="addbtn" class="lgbtn" type="button">＋ 추가</button>
-        <button id="zbtn" class="lgbtn" type="button">＋ 범위 매출</button>
+        <button id="zbtn" class="lgbtn" type="button">＋ 매출</button>
       </div>
             <div class="addp" id="addp" hidden>
         <div class="btns addseg" role="group" aria-label="추가할 종류"><button type="button" class="lgbtn" id="addTS" aria-pressed="true">사진매장</button><button type="button" class="lgbtn" id="addTL" aria-pressed="false">부동산 매물</button><button type="button" class="lgbtn" id="addGps" style="margin-left:auto">내 위치로</button></div>
@@ -1375,7 +1375,7 @@ $("#bhead").onclick = () => bOpen($("#brows").hidden);
 function paintZones() {
   Object.values(zOv).forEach((o) => { try { o.s.setMap(null); } catch (e) {} }); zOv = {};
   const box = $("#zrows"); box.innerHTML = ""; $("#zcount").textContent = store.zones.length ? "(" + store.zones.length + ")" : "";
-  if (!store.zones.length) { const e = document.createElement("div"); e.className = "sm"; e.style.cssText = "padding:6px 0;font-size:12px;color:var(--muted)"; e.textContent = "지도 왼쪽 위 ‘＋ 범위 매출’로 원이나 다각형을 그리면, 그 안에 든 매장의 매출을 따로 집계합니다."; box.appendChild(e); }
+  if (!store.zones.length) { const e = document.createElement("div"); e.className = "sm"; e.style.cssText = "padding:6px 0;font-size:12px;color:var(--muted)"; e.textContent = "지도 왼쪽 위 ‘＋ 매출’로 원이나 다각형을 그리면, 그 안에 든 매장의 매출을 따로 집계합니다."; box.appendChild(e); }
   store.zones.forEach((z, i) => {
     const col = ZCOL[i % ZCOL.length], st = zStats(z);
     const lab = z.n + " · " + (st.avg == null ? "매출 미확인" : "평균 " + fm(st.avg) + " (중앙값 " + fm(st.med) + ")") + " · " + st.m.length + "곳";
