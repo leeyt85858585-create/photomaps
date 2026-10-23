@@ -270,7 +270,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 106</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 107</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -322,8 +322,8 @@ body.fsb{overflow:hidden}
         <div class="btns" id="addSBox"><input id="addN" type="text" placeholder="매장명 (예: 포토OO 연남점)"></div>
         <div id="addLBox" hidden style="display:grid;gap:5px">
           <input id="addLN" type="text" placeholder="매물명 (선택 · 비우면 주소로 표시)">
-          <div class="addnum"><input id="addLR" type="text" inputmode="decimal" placeholder="월세(만원)" aria-label="월세(만원)"><input id="addLD" type="text" inputmode="decimal" placeholder="보증금(만원)" aria-label="보증금(만원)"><input id="addLK" type="text" inputmode="decimal" placeholder="권리금(만원)" aria-label="권리금(만원)"></div>
-          <textarea id="addLE" rows="1" placeholder="기타 사항 (평수, 층, 연락처, 업종 제한 등)" style="font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px"></textarea>
+          <div class="addnum"><input id="addLR" type="text" inputmode="decimal" placeholder="월세" aria-label="월세(만원)"><input id="addLD" type="text" inputmode="decimal" placeholder="보증금" aria-label="보증금(만원)"><input id="addLK" type="text" inputmode="decimal" placeholder="권리금" aria-label="권리금(만원)"></div>
+          <textarea id="addLE" rows="1" placeholder="기타 사항 (평수, 층, 연락처 등) · 금액 단위는 만원" style="font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px"></textarea>
         </div>
         <div id="addPos" style="color:var(--muted)">지도에서 건물을 탭해 위치 지정 (핀은 끌어서 이동)</div>
         <div class="btns"><button type="button" class="lgbtn" id="addOk">추가</button><button type="button" class="lgbtn" id="addCancel">취소</button><button type="button" class="lgbtn" id="addRe" hidden>위치 다시</button><div id="addMsg" class="msg"></div></div>
@@ -1086,8 +1086,9 @@ async function addListingOk() {
 function flToL(f) { return { fid: f.id, field: 1, name: f.name || f.addr, addr: f.addr, road: "", area: f.area, status: "현장 등록" + (f.up ? "" : " · 시트 전송 대기"), rent: f.rent, dep: f.dep, key: f.key, neg: "", py: "", ppr: "", ppk: "", mgmt: "", date: f.date, agent: f.who ? "입력 " + f.who : "", tel: "", note: f.note, la: f.la, lo: f.lo }; }
 let LBASE = [], FLSHEET = [];
 function lMerge() {
-  const seen = new Set(FLSHEET.map((f) => f.id));
-  const fl = [...FLSHEET, ...store.fl.filter((f) => !seen.has(f.id))].map(flToL);
+  const by = new Map(FLSHEET.map((f) => [f.id, f]));
+  store.fl.forEach((f) => { const sh = by.get(f.id); if (!sh || !f.up || (Number(f.t) || 0) >= (Number(sh.t) || 0)) by.set(f.id, f); });
+  const fl = [...by.values()].filter((f) => !f.del).map(flToL);
   LMK.forEach((m) => { try { m && m.setMap(null); } catch (e) {} }); LMK = []; LIST = [...LBASE, ...fl];
   if (map && typeof naver !== "undefined") LIST.forEach((l, i) => { if (!l.la) return; const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 20, icon: { content: '<div class="lmk' + (l.field ? " fld" : "") + '"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) } }); naver.maps.Event.addListener(m, "click", () => selectListing(i)); LMK[i] = m; });
   paintListings(); if (selectedL != null) renderDetail();
@@ -1102,7 +1103,35 @@ function flFromRow(w) {
   const v = (x) => (x == null || x === "-" ? "" : (isFinite(+x) && x !== "" ? +x : x));
   const n = (Array.isArray(w.notes) ? w.notes : []).filter((x) => !x.del).map((x) => x.t).join("\n");
   return { id: p[0], name: String(w.name || "") === String(w.addr || "") ? "" : String(w.name || ""), addr: String(w.addr || ""), area: String(w.area || ""), rent: v(m[1]), dep: v(m[2]), key: v(m[3]), note: n, la: +ll[0] || 0, lo: +ll[1] || 0,
-    date: w.ts ? new Date(+w.ts).toISOString().slice(0, 10) : "", who: (Array.isArray(w.notes) && w.notes[0] && w.notes[0].w) || "", up: 1 };
+    t: Number(w.ts) || 0, date: w.ts ? new Date(+w.ts).toISOString().slice(0, 10) : "", who: (Array.isArray(w.notes) && w.notes[0] && w.notes[0].w) || "", up: 1 };
+}
+// 매물 수정: 내 기기에 사본을 두고(상대가 올린 매물이면 사본 생성) 수정 → 같은 key로 덮어씀. 위치가 바뀌면 옛 key 줄은 삭제 표시
+function flGet(id) {
+  let f = store.fl.find((x) => x.id === id); if (f) return f;
+  const sh = FLSHEET.find((x) => x.id === id); if (!sh) return null;
+  f = Object.assign({}, sh); store.fl.push(f); return f;
+}
+function flSave(f, ch) {
+  const ok = flKey(f); Object.assign(f, ch);
+  if (flKey(f) !== ok && f.up) { f.oldKeys = [...(f.oldKeys || []), ok]; }
+  f.t = Date.now(); f.up = 0; save(); lMerge(); flFlush();
+}
+let lForm = null;  // 수정 중인 매물 id
+function lEditForm(l, el) {
+  const f = flGet(l.fid); if (!f) return;
+  const box = document.createElement("div"); box.style.cssText = "display:grid;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)";
+  const inp = (ph, v, num) => { const i = document.createElement("input"); i.type = "text"; i.placeholder = ph; i.setAttribute("aria-label", ph); i.value = v == null ? "" : v; if (num) i.inputMode = "decimal"; i.style.cssText = "font-size:16px;padding:6px 8px;min-width:0;width:100%;box-sizing:border-box"; return i; };
+  const iN = inp("매물명 (비우면 주소로 표시)", f.name), iR = inp("월세", f.rent, 1), iD = inp("보증금", f.dep, 1), iK = inp("권리금", f.key, 1);
+  const iE = document.createElement("textarea"); iE.rows = 3; iE.placeholder = "기타 사항"; iE.value = f.note || ""; iE.style.cssText = "font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px";
+  const row = document.createElement("div"); row.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"; row.append(iR, iD, iK);
+  const bt = document.createElement("div"); bt.style.cssText = "display:flex;gap:8px";
+  const mk = (t, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = fn; return b; };
+  const num = (i) => { const raw = i.value.trim(), v = raw.replace(/[,\s원]/g, "").replace(/만$/, ""); if (v === "") return ""; if (isFinite(+v)) return +v;
+    const m = v.match(/^(\d+(?:\.\d+)?)억(?:(\d+(?:\.\d+)?)(천)?)?(?:만)?$/); if (m) return Math.round(+m[1] * 10000 + (m[2] ? +m[2] * (m[3] ? 1000 : 1) : 0));
+    const k = v.match(/^(\d+(?:\.\d+)?)천(?:만)?$/); if (k) return Math.round(+k[1] * 1000); return raw; };
+  bt.append(mk("저장", () => { lForm = null; flSave(f, { name: iN.value.trim(), rent: num(iR), dep: num(iD), key: num(iK), note: iE.value.trim() }); }), mk("취소", () => { lForm = null; renderDetail(); }));
+  const u = document.createElement("div"); u.style.cssText = "font-size:11px;color:var(--muted);margin-top:-2px"; u.textContent = "월세 · 보증금 · 권리금 (만원)";
+  box.append(iN, row, u, iE, bt); el.appendChild(box);
 }
 let flBusy = false;
 async function flFlush() {
@@ -1110,8 +1139,11 @@ async function flFlush() {
   try {
     for (const f of store.fl.filter((x) => !x.up)) {
       const ts = Number(f.t) || Date.now(); f.t = ts;
-      try { await syPost({ action: "set", key: flKey(f), name: f.name || f.addr, addr: f.addr, area: f.area, visited: 0, cls: flMoney(f), notes: f.note ? [{ id: f.id + "n", w: sy.who || "", t: f.note, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" }); f.up = 1; ch++; }
-      catch (e) { sySt("매물 시트 저장 실패 (이 기기에는 저장됨, 다음 동기화 때 재시도)"); break; }
+      try {
+        for (const ok of (f.oldKeys || [])) await syPost({ action: "set", key: ok, name: f.name || f.addr, addr: f.addr, area: f.area, del: 1, ts });
+        f.oldKeys = [];
+        await syPost({ action: "set", key: flKey(f), name: f.name || f.addr, addr: f.addr, area: f.area, visited: 0, cls: flMoney(f), notes: f.note ? [{ id: f.id + "n", w: sy.who || "", t: f.note, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" }); f.up = 1; ch++; }
+      catch (e) { save(); sySt("매물 시트 저장 실패 (이 기기에는 저장됨, 다음 동기화 때 재시도)"); break; }
     }
   } finally { flBusy = false; if (ch) { save(); lMerge(); } }
 }
@@ -1221,7 +1253,7 @@ function paintListings() {
   LMK.forEach((m, i) => { if (!m) return; try { m.setIcon({ content: '<div class="lmk' + (LIST[i] && LIST[i].field ? " fld" : "") + (selectedL === i ? " sel" : "") + '"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) }); } catch (e) {} });
 }
 function selectListing(i) {
-  const prev = selected; selected = null; selectedL = i; fsHidden = false;
+  const prev = selected; selected = null; if (selectedL !== i) { lForm = null; lEdit = false; } selectedL = i; fsHidden = false;
   if (prev != null) setIcon(prev);
   renderDetail(); renderList(); paintListings(); try { fsInfo(); } catch (e) {}
   const l = LIST[i]; try { if (map && l.la) { map.setZoom(Math.max(map.getZoom(), 17)); map.panTo(new naver.maps.LatLng(l.la, l.lo)); } } catch (e) {}
@@ -1232,19 +1264,26 @@ function renderListing(l, el) {
   el.querySelector("h2").textContent = l.name;
   const bd = el.querySelector(".badges"); [["부동산 매물", "warn"], [l.status || "", ""], [l.area || "", ""]].forEach(([t, c]) => { if (!t) return; const s = document.createElement("span"); s.className = "badge " + c; s.textContent = t; bd.appendChild(s); });
   const dl = el.querySelector("dl"), row = (a, b, c) => { if (b === "" || b == null) b = "미확인"; const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (c) v.className = c; dl.append(t, v); };
-  row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("협의예상금", l.neg); row("평수", l.py ? l.py.replace(/^(\d+(?:\.\d+)?)/, "$1평") : "");
+  if (l.field) { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("등록일", l.date + (l.agent ? " · " + l.agent : "")); row("기타 사항", l.note); }
+  else { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("협의예상금", l.neg); row("평수", l.py ? l.py.replace(/^(\d+(?:\.\d+)?)/, "$1평") : "");
   row("평당 월세", l.ppr === "" ? "" : manwon(l.ppr), "num"); row("평당 권리금", l.ppk === "" ? "" : manwon(l.ppk), "num"); row("관리비", l.mgmt);
-  row("확인일", l.date); row("확인 부동산", l.agent + (l.tel ? " · " + l.tel : "")); row("특이사항", l.note);
+  row("확인일", l.date); row("확인 부동산", l.agent + (l.tel ? " · " + l.tel : "")); row("특이사항", l.note); }
   const ln = el.querySelector(".links");
   [["카카오맵에서 열기", "https://map.kakao.com/link/search/" + encodeURIComponent(l.addr)], ["네이버지도에서 검색", "https://map.naver.com/p/search/" + encodeURIComponent("서울 " + l.addr)]].forEach(([t, h]) => { const a = document.createElement("a"); a.href = h; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
   { const bx = document.createElement("div"); bx.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center";
     const mkb = (t, f) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = f; return b; };
     const i = LIST.indexOf(l), mk = LMK[i];
-    if (l.field) {} else if (!lEdit) bx.append(mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }));
+    if (l.field) {
+      if (lEdit) { const t = document.createElement("span"); t.style.cssText = "font-size:12px;color:var(--muted)"; t.textContent = "지도의 초록 마름모를 끌어 옮기세요";
+        bx.append(t, mkb("위치 저장", async () => { try { const p = mk.getPosition(), la = p.lat(), lo = p.lng(); mk.setDraggable(false); lEdit = false; const f = flGet(l.fid); if (!f) return;
+          const ad = await revAddr(la, lo); flSave(f, { la, lo, addr: ad || f.addr, area: AREAL[zOf(null, la, lo)] || f.area }); } catch (e) {} }),
+          mkb("취소", () => { try { if (mk && l.old) { mk.setPosition(new naver.maps.LatLng(l.old[0], l.old[1])); mk.setDraggable(false); } } catch (e) {} lEdit = false; renderDetail(); }));
+      } else if (lForm !== l.fid) bx.append(mkb("내용 수정", () => { lForm = l.fid; renderDetail(); }), mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }));
+    } else if (!lEdit) bx.append(mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }));
     else { const t = document.createElement("span"); t.style.cssText = "font-size:12px;color:var(--muted)"; t.textContent = "지도의 주황 마름모를 끌어 옮기세요";
       bx.append(t, mkb("위치 저장", async () => { try { const p = mk.getPosition(); l.la = p.lat(); l.lo = p.lng(); mk.setDraggable(false); lEdit = false; LPOS[l.addr] = [l.la, l.lo]; renderDetail(); await syPost({ action: "listpos", addr: l.addr, lat: l.la, lng: l.lo }); } catch (e) { sySt("위치 저장 실패 (이 기기에는 저장됨)"); } }),
         mkb("취소", () => { try { if (mk && l.old) { mk.setPosition(new naver.maps.LatLng(l.old[0], l.old[1])); mk.setDraggable(false); } } catch (e) {} lEdit = false; renderDetail(); })); }
-    el.appendChild(bx); }
+    el.appendChild(bx); if (l.field && lForm === l.fid) lEditForm(l, el); }
   if (l.approx) { const m = document.createElement("div"); m.style.cssText = "font-size:12px;color:var(--muted);margin-top:6px"; m.textContent = "※ 정확한 주소 변환이 안 돼 근처 매장 위치로 대략 표시했습니다."; el.appendChild(m); }
   if (!l.la) { const m = document.createElement("div"); m.className = "msg"; m.style.cssText = "font-size:12px;color:#b42318;margin-top:6px"; m.textContent = "지도 위치를 찾지 못해 표시하지 못했습니다 (주소 변환 실패)."; el.appendChild(m); }
 }
