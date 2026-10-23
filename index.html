@@ -270,7 +270,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 108</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 109</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -322,8 +322,8 @@ body.fsb{overflow:hidden}
         <div class="btns" id="addSBox"><input id="addN" type="text" placeholder="매장명 (예: 포토OO 연남점)"></div>
         <div id="addLBox" hidden style="display:grid;gap:5px">
           <input id="addLN" type="text" placeholder="매물명 (선택 · 비우면 주소로 표시)">
-          <div class="addnum"><input id="addLR" type="text" inputmode="decimal" placeholder="월세" aria-label="월세(만원)"><input id="addLD" type="text" inputmode="decimal" placeholder="보증금" aria-label="보증금(만원)"><input id="addLK" type="text" inputmode="decimal" placeholder="권리금" aria-label="권리금(만원)"></div>
-          <textarea id="addLE" rows="1" placeholder="기타 사항 (평수, 층, 연락처 등) · 금액 단위는 만원" style="font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px"></textarea>
+          <div class="addnum"><input id="addLR" type="text" inputmode="decimal" placeholder="월세" aria-label="월세(만원)"><input id="addLD" type="text" inputmode="decimal" placeholder="보증금" aria-label="보증금(만원)"><input id="addLK" type="text" inputmode="decimal" placeholder="권리금(억)" aria-label="권리금(억 원)"></div>
+          <textarea id="addLE" rows="1" placeholder="기타 사항 (평수, 층, 연락처 등) · 월세·보증금은 만원, 권리금은 억" style="font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px"></textarea>
         </div>
         <div id="addPos" style="color:var(--muted)">지도에서 건물을 탭해 위치 지정 (핀은 끌어서 이동)</div>
         <div class="btns"><button type="button" class="lgbtn" id="addOk">추가</button><button type="button" class="lgbtn" id="addCancel">취소</button><button type="button" class="lgbtn" id="addRe" hidden>위치 다시</button><div id="addMsg" class="msg"></div></div>
@@ -1044,6 +1044,7 @@ function addLayout() {
   if (l && !pickPos) $("#addPos").textContent = "지도에서 매물 위치를 탭하세요 (핀은 끌어서 이동)";
 }
 $("#addRe").onclick = () => { addForm = false; addLayout(); $("#addPos").textContent = "지도를 탭해 위치를 다시 찍으세요"; };
+["#addLR", "#addLD", "#addLK"].forEach((q) => commaLive($(q)));
 $("#addTS").onclick = () => setAddMode("s"); $("#addTL").onclick = () => setAddMode("l");
 $("#addGps").onclick = () => {
   $("#addMsg").textContent = "";
@@ -1065,18 +1066,28 @@ $("#addOk").onclick = async () => {
 
 // ===== 현장 매물 추가 (임장기록 시트 '현장매물' 탭에 저장, 매물DB 원본은 건드리지 않음) =====
 store.fl = store.fl || [];
-// 만원 단위 숫자로 저장 ("5,000" → 5000, "1억 2천" → 12000). 해석 못 하면 입력 그대로
-const numIn = (q) => { const raw = $(q).value.trim(), v = raw.replace(/[,\s원]/g, "").replace(/만$/, ""); if (v === "") return "";
-  if (isFinite(+v)) return +v;
-  const m = v.match(/^(\d+(?:\.\d+)?)억(?:(\d+(?:\.\d+)?)(천)?)?(?:만)?$/); if (m) return Math.round(+m[1] * 10000 + (m[2] ? +m[2] * (m[3] ? 1000 : 1) : 0));
-  const k = v.match(/^(\d+(?:\.\d+)?)천(?:만)?$/); if (k) return Math.round(+k[1] * 1000); return raw; };
+// 금액은 만원 단위 숫자로 저장. 월세·보증금은 만원으로, 권리금은 억으로 입력 ("1.5" → 15000만)
+// "5,000"·"1억 2천"·"3천만"처럼 써도 됨. 해석 못 하면 입력 그대로(예: 협의)
+function parseMoney(raw, unit) {
+  raw = String(raw || "").trim(); const v = raw.replace(/[,\s원]/g, ""); if (v === "") return "";
+  if (isFinite(+v)) return unit === "eok" && +v < 100 ? Math.round(+v * 10000) : +v;  // 권리금에 100 이상을 쓰면 만원으로 본다(예: 3000 → 3,000만)
+  const w = v.replace(/만$/, "");
+  const m = w.match(/^(\d+(?:\.\d+)?)억(?:(\d+(?:\.\d+)?)(천)?)?$/); if (m) return Math.round(+m[1] * 10000 + (m[2] ? +m[2] * (m[3] ? 1000 : 1) : 0));
+  const k = w.match(/^(\d+(?:\.\d+)?)천$/); if (k) return Math.round(+k[1] * 1000);
+  if (isFinite(+w)) return +w; return raw;
+}
+const numIn = (q, unit) => parseMoney($(q).value, unit);
+// 입력 중 세 자리마다 쉼표
+function commaLive(i) { i.addEventListener("input", () => { const v = i.value, m = v.match(/^(\d[\d,]*)(\.\d*)?$/); if (!m) return; const f = Number(m[1].replace(/,/g, "")).toLocaleString("en-US") + (m[2] || ""); if (f !== v) { i.value = f; try { i.setSelectionRange(f.length, f.length); } catch (e) {} } }); }
+const toEok = (v) => (v === "" || v == null) ? "" : (typeof v === "number" || isFinite(+v)) ? String(+(Number(v) / 10000).toFixed(4)) : String(v);
+const withComma = (v) => (v === "" || v == null) ? "" : isFinite(+v) ? Number(v).toLocaleString("en-US") : String(v);
 async function addListingOk() {
   if (!pickPos) { $("#addMsg").textContent = "지도에서 위치를 먼저 찍으세요"; return; }
   const c = pickPos; $("#addMsg").textContent = "주소 확인 중…";
   let ad = await revAddr(c.la, c.lo); if (!ad) ad = await revAddr(c.la, c.lo);
   const z = zOf(null, c.la, c.lo), now = new Date();
   const f = { id: "F" + now.getTime().toString(36), name: $("#addLN").value.trim(), addr: ad || ("좌표 " + c.la.toFixed(5) + "," + c.lo.toFixed(5)), area: AREAL[z] || "",
-    rent: numIn("#addLR"), dep: numIn("#addLD"), key: numIn("#addLK"), note: $("#addLE").value.trim(), la: c.la, lo: c.lo,
+    rent: numIn("#addLR"), dep: numIn("#addLD"), key: numIn("#addLK", "eok"), note: $("#addLE").value.trim(), la: c.la, lo: c.lo,
     date: vtNow().slice(0, 10), who: (sy && sy.who) || "", up: 0 };
   store.fl.push(f); save();
   endPick(); markBtn(); lMerge(); const i = LIST.findIndex((l) => l.fid === f.id); if (i >= 0) selectListing(i);
@@ -1121,16 +1132,14 @@ function lEditForm(l, el) {
   const f = flGet(l.fid); if (!f) return;
   const box = document.createElement("div"); box.style.cssText = "display:grid;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)";
   const inp = (ph, v, num) => { const i = document.createElement("input"); i.type = "text"; i.placeholder = ph; i.setAttribute("aria-label", ph); i.value = v == null ? "" : v; if (num) i.inputMode = "decimal"; i.style.cssText = "font-size:16px;padding:6px 8px;min-width:0;width:100%;box-sizing:border-box"; return i; };
-  const iN = inp("매물명 (비우면 주소로 표시)", f.name), iR = inp("월세", f.rent, 1), iD = inp("보증금", f.dep, 1), iK = inp("권리금", f.key, 1);
+  const iN = inp("매물명 (비우면 주소로 표시)", f.name), iR = inp("월세", withComma(f.rent), 1), iD = inp("보증금", withComma(f.dep), 1), iK = inp("권리금(억)", toEok(f.key), 1); [iR, iD, iK].forEach(commaLive);
   const iE = document.createElement("textarea"); iE.rows = 3; iE.placeholder = "기타 사항"; iE.value = f.note || ""; iE.style.cssText = "font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px";
   const row = document.createElement("div"); row.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px"; row.append(iR, iD, iK);
   const bt = document.createElement("div"); bt.style.cssText = "display:flex;gap:8px";
   const mk = (t, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = fn; return b; };
-  const num = (i) => { const raw = i.value.trim(), v = raw.replace(/[,\s원]/g, "").replace(/만$/, ""); if (v === "") return ""; if (isFinite(+v)) return +v;
-    const m = v.match(/^(\d+(?:\.\d+)?)억(?:(\d+(?:\.\d+)?)(천)?)?(?:만)?$/); if (m) return Math.round(+m[1] * 10000 + (m[2] ? +m[2] * (m[3] ? 1000 : 1) : 0));
-    const k = v.match(/^(\d+(?:\.\d+)?)천(?:만)?$/); if (k) return Math.round(+k[1] * 1000); return raw; };
-  bt.append(mk("저장", () => { lForm = null; flSave(f, { name: iN.value.trim(), rent: num(iR), dep: num(iD), key: num(iK), note: iE.value.trim() }); }), mk("취소", () => { lForm = null; renderDetail(); }));
-  const u = document.createElement("div"); u.style.cssText = "font-size:11px;color:var(--muted);margin-top:-2px"; u.textContent = "월세 · 보증금 · 권리금 (만원)";
+  const num = (i, u) => parseMoney(i.value, u);
+  bt.append(mk("저장", () => { lForm = null; flSave(f, { name: iN.value.trim(), rent: num(iR), dep: num(iD), key: num(iK, "eok"), note: iE.value.trim() }); }), mk("취소", () => { lForm = null; renderDetail(); }));
+  const u = document.createElement("div"); u.style.cssText = "font-size:11px;color:var(--muted);margin-top:-2px"; u.textContent = "월세 · 보증금은 만원, 권리금은 억 단위";
   box.append(iN, row, u, iE, bt); el.appendChild(box);
 }
 let flBusy = false;
@@ -1207,6 +1216,7 @@ document.addEventListener("fullscreenchange", () => { if (!document.fullscreenEl
 // ===== 부동산 매물 (비공개 시트에서 불러옴: 공개 페이지에는 데이터를 넣지 않음) =====
 let LIST = [], LMK = [], lEdit = false;
 const GEOK = "imjang-geo-v1"; let geo = {}; try { geo = JSON.parse(localStorage.getItem(GEOK) || "{}"); } catch (e) {}
+const eokman = (v) => { const n = Number(String(v).replace(/,/g, "")); if (v === "" || v == null) return "미확인"; if (!isFinite(n) || String(v).trim() === "") return String(v); if (n < 10000) return n.toLocaleString() + "만"; const e = Math.floor(n / 10000), r = Math.round(n % 10000); return e + "억" + (r ? " " + r.toLocaleString() + "만" : ""); };
 const manwon = (v) => { const n = Number(String(v).replace(/,/g, "")); return v === "" || v == null ? "미확인" : isFinite(n) && String(v).trim() !== "" ? n.toLocaleString() + "만" : String(v); };
 function approxL(l) {
   // 주소 변환이 안 될 때: 같은 도로명/동의 가장 가까운 번지 매장 위치로 근사
@@ -1247,7 +1257,7 @@ function paintListings() {
     b.innerHTML = '<span class="bd">매물</span><span><div class="nm"></div><div class="sub"></div></span><span class="sub" style="text-align:right"></span>';
     b.querySelector(".nm").textContent = l.name + (l.area ? " · " + l.area : "");
     b.querySelector(".sub").textContent = l.addr;
-    b.lastChild.textContent = "권리금 " + manwon(l.key);
+    b.lastChild.textContent = "권리금 " + eokman(l.key);
     b.onclick = () => selectListing(i); box.appendChild(b);
   });
   LMK.forEach((m, i) => { if (!m) return; try { m.setIcon({ content: '<div class="lmk' + (LIST[i] && LIST[i].field ? " fld" : "") + (selectedL === i ? " sel" : "") + '"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) }); } catch (e) {} });
@@ -1267,8 +1277,8 @@ function renderListing(l, el) {
   { const pk = lPhotoKey(l); renderPhotos({ n: "매물 " + l.name }, el.querySelector(".shp"), { k: pk, cur: () => selectedL != null && LIST[selectedL] && lPhotoKey(LIST[selectedL]) === pk }); }
   const bd = el.querySelector(".badges"); [["부동산 매물", "warn"], [l.status || "", ""], [l.area || "", ""]].forEach(([t, c]) => { if (!t) return; const s = document.createElement("span"); s.className = "badge " + c; s.textContent = t; bd.appendChild(s); });
   const dl = el.querySelector("dl"), row = (a, b, c) => { if (b === "" || b == null) b = "미확인"; const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; if (c) v.className = c; dl.append(t, v); };
-  if (l.field) { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("등록일", l.date + (l.agent ? " · " + l.agent : "")); row("기타 사항", l.note); }
-  else { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", manwon(l.key), "num"); row("협의예상금", l.neg); row("평수", l.py ? l.py.replace(/^(\d+(?:\.\d+)?)/, "$1평") : "");
+  if (l.field) { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", eokman(l.key), "num"); row("등록일", l.date + (l.agent ? " · " + l.agent : "")); row("기타 사항", l.note); }
+  else { row("주소", l.addr); row("월세 / 보증금", manwon(l.rent) + " / " + manwon(l.dep), "num"); row("권리금", eokman(l.key), "num"); row("협의예상금", l.neg); row("평수", l.py ? l.py.replace(/^(\d+(?:\.\d+)?)/, "$1평") : "");
   row("평당 월세", l.ppr === "" ? "" : manwon(l.ppr), "num"); row("평당 권리금", l.ppk === "" ? "" : manwon(l.ppk), "num"); row("관리비", l.mgmt);
   row("확인일", l.date); row("확인 부동산", l.agent + (l.tel ? " · " + l.tel : "")); row("특이사항", l.note); }
   const ln = el.querySelector(".links");
