@@ -271,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 115</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 116</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -544,7 +544,7 @@ let store = { visited: {}, memo: {}, cls: {} };
 try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
 function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 const skey = (d) => d.k || d.j + "|" + d.n;
-store.cls = store.cls || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
+store.cls = store.cls || {}; store.pos = store.pos || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
 store.added = store.added || []; store.removed = store.removed || {};
 store.added = store.added.filter((a) => !store.removed[(a.j || ("현장추가 " + a.la.toFixed(5) + "," + a.lo.toFixed(5))) + "|" + a.n]);
 store.memos = store.memos || {}; store.memo = store.memo || {};
@@ -567,6 +567,7 @@ function mkCustom(a) { return { z: a.z, n: a.n, j: a.j, r: /^현장추가 /.test
 { const dk = new Set(DATA.map(skey)); const n0 = store.added.length; store.added = store.added.filter((a) => !dk.has((a.j || ("현장추가 " + a.la.toFixed(5) + "," + a.lo.toFixed(5))) + "|" + a.n)); if (store.added.length !== n0) save(); }
 store.added.forEach((a) => DATA.push(mkCustom(a)));
 const seen = {};
+DATA.forEach((d) => { d.ola = d.la; d.olo = d.lo; const p = store.pos[skey(d)]; if (p) { d.la = p[0]; d.lo = p[1]; } });
 DATA.forEach((d) => {
   const k = d.la.toFixed(5) + "," + d.lo.toFixed(5), n = seen[k] = (seen[k] || 0) + 1;
   d.mla = d.la; d.mlo = d.lo;
@@ -836,6 +837,33 @@ function renderDetail() {
     const lt = document.createElement("span"); lt.innerHTML = "이 매장 매물 나옴 <span style='font-size:12px;color:var(--muted)'>(체크하면 월세·보증금·권리금·메모 입력)</span>";
     lw.append(lc, lt); el.appendChild(lw);
     const lf = d.lease && leaseF(d); if (lf) { lEditForm(flToL(lf), el, true); } }
+  { const pw = document.createElement("div"); pw.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px";
+    const pb = document.createElement("button"); pb.type = "button"; pb.className = "lgbtn"; pb.textContent = "📍 위치 미세조정"; pb.onclick = () => startAdjust(d);
+    const ps = document.createElement("span"); ps.style.cssText = "font-size:12px;color:var(--muted)"; ps.textContent = store.pos[k] ? "조정됨" : "";
+    pw.append(pb, ps); el.appendChild(pw); }
+}
+// 위치 미세조정: 핀을 끌거나 지도를 탭해 옮긴 뒤 저장 (매장 키별로 기록, 시트 위도·경도 칸으로 동기화)
+let adjMk = null, adjBar = null, adjBound = false, adjCur = null;
+function endAdjust() { try { if (adjMk) adjMk.setMap(null); } catch (e) {} adjMk = null; adjCur = null; if (adjBar) { adjBar.remove(); adjBar = null; } }
+function startAdjust(d) {
+  if (!map || typeof naver === "undefined") return; endAdjust();
+  const pin = '<div style="font-size:30px;line-height:30px;transform:translate(-50%,-100%);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">📍</div>';
+  adjMk = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.la, d.lo), draggable: true, zIndex: 99, icon: { content: pin, anchor: new naver.maps.Point(0, 0) } });
+  adjCur = [d.la, d.lo];
+  if (!adjBound) { adjBound = true; naver.maps.Event.addListener(map, "click", (e) => { if (adjMk) { adjMk.setPosition(e.coord); adjCur = [e.coord.lat(), e.coord.lng()]; } }); }
+  naver.maps.Event.addListener(adjMk, "dragend", () => { const q = adjMk.getPosition(); adjCur = [q.lat(), q.lng()]; });
+  try { map.setZoom(Math.max(map.getZoom(), 19)); map.panTo(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
+  const bar = document.createElement("div"); adjBar = bar;
+  bar.style.cssText = "position:fixed;left:12px;right:12px;bottom:14px;z-index:9999;background:var(--surface,#fff);color:var(--ink,#16212b);border:1px solid var(--line,#ccc);border-radius:12px;padding:10px 12px;box-shadow:0 4px 16px rgba(0,0,0,.25);display:grid;gap:8px;font-size:14px";
+  const t = document.createElement("div"); t.textContent = d.n + " · 핀을 끌거나 지도를 탭해 정확한 위치로 옮기세요"; bar.appendChild(t);
+  const row = document.createElement("div"); row.style.cssText = "display:flex;gap:8px";
+  const mk = (txt, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = txt; b.onclick = fn; b.style.flex = "1"; return b; };
+  row.append(mk("위치 저장", () => {
+    const k = skey(d); d.la = adjCur[0]; d.lo = adjCur[1]; d.mla = d.la; d.mlo = d.lo; store.pos[k] = [d.la, d.lo];
+    try { markers[d.id] && markers[d.id].setPosition(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
+    save(); touch(d); endAdjust(); renderDetail();
+  }), mk("원위치", () => { adjCur = [d.ola, d.olo]; try { adjMk.setPosition(new naver.maps.LatLng(d.ola, d.olo)); } catch (e) {} }), mk("취소", endAdjust));
+  bar.appendChild(row); document.body.appendChild(bar);
 }
 function whoNow() { try { return sy.who === "이" || sy.who === "홍" ? sy.who : ""; } catch (e) { return ""; } }
 function fmtTs(ts) { return ts > 1e12 ? new Date(ts).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""; }
@@ -993,7 +1021,7 @@ function addCustom(a, local) {
   if (byKey(a.j + "|" + a.n)) return byKey(a.j + "|" + a.n);
   store.added.push(a); save();
   const d = mkCustom(a); DATA.push(d);
-  d.mla = d.la; d.mlo = d.lo; d.vis = !!store.visited[skey(d)]; d.cls = store.cls[skey(d)] || "";
+  d.ola = d.la; d.olo = d.lo; { const p = store.pos[skey(d)]; if (p) { d.la = p[0]; d.lo = p[1]; } } d.mla = d.la; d.mlo = d.lo; d.vis = !!store.visited[skey(d)]; d.cls = store.cls[skey(d)] || "";
   if (typeof naver !== "undefined" && map) {
     const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.mla, d.mlo), icon: { content: iconHtml(d), anchor: new naver.maps.Point(0, 0) }, zIndex: (isNew(d) || isStale(d)) ? 12 : 10 });
     naver.maps.Event.addListener(m, "click", () => select(d.id, false)); markers[d.id] = m;
@@ -1566,7 +1594,7 @@ async function syFlush() {
       if (rm) { await syPost({ action: "set", key: k, name: rm.n, addr: rm.j, area: rm.a || "", del: 1, ts: rm.ts }); delete syq[k]; syQSave(); continue; }
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
       const ts = store.ts[k] || Date.now();
-      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, vt: (store.vt || {})[k] || "", dev: isPhone() ? "폰" : "PC", cls: CLSK[d.cls] || "", notes: store.notes[k] || [], booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
+      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, vt: (store.vt || {})[k] || "", dev: isPhone() ? "폰" : "PC", cls: CLSK[d.cls] || "", notes: store.notes[k] || [], booth: store.booth[k] || "", lat: (d.custom || store.pos[k]) ? d.la : "", lng: (d.custom || store.pos[k]) ? d.lo : "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
     }
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
@@ -1594,6 +1622,7 @@ async function syPull() {
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
       if (c) store.cls[w.key] = c; else delete store.cls[w.key];
       if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; }
+      { const pla = Number(w.lat), plo = Number(w.lng); if (w.lat && w.lng && isFinite(pla) && isFinite(plo) && (Math.abs(pla - d.la) > 1e-7 || Math.abs(plo - d.lo) > 1e-7)) { store.pos[w.key] = [pla, plo]; d.la = pla; d.lo = plo; d.mla = pla; d.mlo = plo; try { markers[d.id] && markers[d.id].setPosition(new naver.maps.LatLng(pla, plo)); } catch (e) {} } }
       store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
     if (!store.vtMig && vtNow().slice(0, 10) <= "2026-10-17") { store.vt = store.vt || {}; let nb = 0; Object.keys(store.visited).forEach((k) => { if (store.visited[k] && !store.vt[k] && byKey(k)) { store.vt[k] = "2026-10-16"; syq[k] = 1; nb++; } }); store.vtMig = 1; if (nb) { syQSave(); ch++; clearTimeout(syTimer); syTimer = setTimeout(syFlush, 800); } }
@@ -1610,11 +1639,11 @@ document.querySelectorAll("#syWhoRow button").forEach((b) => { b.onclick = () =>
 $("#sySave").onclick = () => {
   sy = { url: $("#syUrl").value.trim(), token: $("#syTok").value.trim(), who: $("#syWho").value.trim() };
   try { localStorage.setItem(SYK, JSON.stringify(sy)); } catch (e) {}
-  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
+  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth), ...Object.keys(store.pos)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
   syAll();
 };
 $("#sySync").onclick = syAll;
-$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
+$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth), ...Object.keys(store.pos)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
 function linkConnect(txt) {
   const m = /[#?&]sync=([A-Za-z0-9+\/=_%-]+)/.exec(String(txt || "")) || [null, String(txt || "").trim()];
   try { const o = dec(decodeURIComponent(m[1])); if (!(o && o.u && o.t)) throw 0;
