@@ -271,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 113</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 114</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -564,6 +564,7 @@ Object.keys(store.memos).forEach((k) => { if (legacyNotes(k, store.memos[k])) st
 store.memos = {};
 save();
 function mkCustom(a) { return { z: a.z, n: a.n, j: a.j, r: /^현장추가 /.test(a.j || "현장추가 ") ? "" : String(a.j).split(" (")[0], la: a.la, lo: a.lo, s: "none", on: null, orr: null, mo: null, rev: null, hi: null, id: DATA.length, custom: 1 }; }
+{ const dk = new Set(DATA.map(skey)); const n0 = store.added.length; store.added = store.added.filter((a) => !dk.has((a.j || ("현장추가 " + a.la.toFixed(5) + "," + a.lo.toFixed(5))) + "|" + a.n)); if (store.added.length !== n0) save(); }
 store.added.forEach((a) => DATA.push(mkCustom(a)));
 const seen = {};
 DATA.forEach((d) => {
@@ -812,17 +813,17 @@ function renderDetail() {
   const chk = $("#vchk"); chk.checked = d.vis;
   chk.onchange = () => setVis(d, chk.checked);
   { const vt = (store.vt || {})[k]; if (vt || d.vis) { const sp = chk.nextElementSibling; sp.textContent = "방문했음" + (vt ? " · " + vt.replace(/^\d{4}-/, "").replace(/ 00:00$/, "") : ""); if (vt && vt.length === 10) sp.textContent += " (시각 미확인)"; } }
-  { const lw = document.createElement("label"); lw.style.cssText = "display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px 12px;border:1.5px solid " + (d.lease ? "#e11d48" : "var(--line)") + ";border-radius:10px;font-size:15px;font-weight:600";
-    const lc = document.createElement("input"); lc.type = "checkbox"; lc.checked = !!d.lease; lc.style.cssText = "width:22px;height:22px";
-    lc.onchange = () => setLease(d, lc.checked);
-    const lt = document.createElement("span"); lt.innerHTML = "이 자리에 매물 나옴 <span style='font-size:12px;font-weight:400;color:var(--muted)'>(현장에서 임대 매물 확인)</span>";
-    lw.append(lc, lt); chk.parentElement.insertAdjacentElement("afterend", lw); }
   buildMemos(d, k);
   { const w = document.createElement("label"); w.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px";
     const c = document.createElement("input"); c.type = "checkbox"; c.checked = d.cls === "closed"; c.style.cssText = "width:20px;height:20px";
     c.onchange = () => setCls(d, c.checked ? "closed" : ((typeof OC !== "undefined" && OC[k]) || ""));
     const t = document.createElement("span"); t.innerHTML = "폐업 확인 <span style='font-size:12px;color:var(--muted)'>(체크하면 자동 수집·평균에서 제외)</span>";
     w.append(c, t); el.appendChild(w); }
+  { const lw = document.createElement("label"); lw.style.cssText = "display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px 12px;border:1.5px solid " + (d.lease ? "#e11d48" : "var(--line)") + ";border-radius:10px;font-size:15px;font-weight:600";
+    const lc = document.createElement("input"); lc.type = "checkbox"; lc.checked = !!d.lease; lc.style.cssText = "width:22px;height:22px";
+    lc.onchange = () => setLease(d, lc.checked);
+    const lt = document.createElement("span"); lt.innerHTML = "이 매장 매물 나옴 <span style='font-size:12px;font-weight:400;color:var(--muted)'>(현장에서 임대 매물 확인)</span>";
+    lw.append(lc, lt); el.appendChild(lw); }
 }
 function whoNow() { try { return sy.who === "이" || sy.who === "홍" ? sy.who : ""; } catch (e) { return ""; } }
 function fmtTs(ts) { return ts > 1e12 ? new Date(ts).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""; }
