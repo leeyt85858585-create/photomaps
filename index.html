@@ -271,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 114</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 115</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -544,7 +544,7 @@ let store = { visited: {}, memo: {}, cls: {} };
 try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
 function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 const skey = (d) => d.k || d.j + "|" + d.n;
-store.cls = store.cls || {}; store.lease = store.lease || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
+store.cls = store.cls || {}; store.ts = store.ts || {}; store.booth = store.booth || {};
 store.added = store.added || []; store.removed = store.removed || {};
 store.added = store.added.filter((a) => !store.removed[(a.j || ("현장추가 " + a.la.toFixed(5) + "," + a.lo.toFixed(5))) + "|" + a.n]);
 store.memos = store.memos || {}; store.memo = store.memo || {};
@@ -571,7 +571,7 @@ DATA.forEach((d) => {
   const k = d.la.toFixed(5) + "," + d.lo.toFixed(5), n = seen[k] = (seen[k] || 0) + 1;
   d.mla = d.la; d.mlo = d.lo;
   if (n > 1) { const a = (n - 1) * 2.1; d.mla += Math.sin(a) * 0.00006; d.mlo += Math.cos(a) * 0.00007; }
-  d.vis = !!store.visited[skey(d)]; d.cls = (store.cls || {})[skey(d)] || (d.cl ? "closed" : ""); d.lease = !!(store.lease || {})[skey(d)];
+  d.vis = !!store.visited[skey(d)]; d.cls = (store.cls || {})[skey(d)] || (d.cl ? "closed" : "");
 });
 const tier = (h) => h == null ? -1 : h <= 500 ? 0 : h <= 1500 ? 1 : h <= 3000 ? 2 : h <= 5000 ? 3 : 4;
 let selected = null, selectedL = null, map = null, markers = [];
@@ -670,7 +670,18 @@ function vtMark(k) { if (!isPhone()) return; store.vt = store.vt || {}; const n 
 function setVis(d, v) { d.vis = v; const k = skey(d); if (v) { store.visited[k] = 1; vtMark(k); } else delete store.visited[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
 let boothOther = null;
 function setBooth(d, v) { const k = skey(d); if (v) store.booth[k] = v; else delete store.booth[k]; save(); touch(d); renderDetail(); }
-function setLease(d, v) { d.lease = v; const k = skey(d); if (v) store.lease[k] = 1; else delete store.lease[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
+// 이 매장 매물 나옴: 매장 위치에 현장 매물(store.fl)을 하나 만들어 연결한다. 매장 키로 만든 고정 id라 시트로 동기화되고 어느 기기에서나 같은 매물로 보인다
+function leaseId(k) { let a = 5381, b = 52711; for (let i = 0; i < k.length; i++) { const c = k.charCodeAt(i); a = ((a * 33) ^ c) >>> 0; b = ((b * 31) + c) >>> 0; } return "L" + a.toString(36) + b.toString(36); }
+function leaseF(d) { const id = leaseId(skey(d)); return store.fl.find((x) => x.id === id && !x.del) || (!store.fl.some((x) => x.id === id) ? FLSHEET.find((x) => x.id === id && !x.del) : null) || null; }
+function setLease(d, v) {
+  const id = leaseId(skey(d));
+  if (v) {
+    let f = store.fl.find((x) => x.id === id);
+    if (f) { f.del = 0; f.up = 0; f.t = Date.now(); }
+    else { const sh = FLSHEET.find((x) => x.id === id); f = sh ? Object.assign({}, sh, { up: 0, t: Date.now(), del: 0 }) : { id, name: d.n + " 매물", addr: d.j, area: AREAL[d.z] || "", rent: "", dep: "", key: "", note: "", la: d.la, lo: d.lo, date: vtNow().slice(0, 10), who: (sy && sy.who) || "", up: 0, t: Date.now() }; store.fl.push(f); }
+  } else { const f = store.fl.find((x) => x.id === id) || FLSHEET.find((x) => x.id === id); if (f) { if (!store.fl.includes(f)) store.fl.push(Object.assign({}, f)); const g = store.fl.find((x) => x.id === id); g.del = 1; g.up = 0; g.t = Date.now(); } }
+  save(); lMerge(); flFlush(); renderDetail();
+}
 function setCls(d, v) { d.cls = v; const k = skey(d); if (v) store.cls[k] = v; else delete store.cls[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
 /* ---------- 사진 (이 기기 브라우저에 저장) ---------- */
 let _db = null, thumbUrls = [];
@@ -819,11 +830,12 @@ function renderDetail() {
     c.onchange = () => setCls(d, c.checked ? "closed" : ((typeof OC !== "undefined" && OC[k]) || ""));
     const t = document.createElement("span"); t.innerHTML = "폐업 확인 <span style='font-size:12px;color:var(--muted)'>(체크하면 자동 수집·평균에서 제외)</span>";
     w.append(c, t); el.appendChild(w); }
-  { const lw = document.createElement("label"); lw.style.cssText = "display:flex;gap:10px;align-items:center;margin-top:10px;padding:10px 12px;border:1.5px solid " + (d.lease ? "#e11d48" : "var(--line)") + ";border-radius:10px;font-size:15px;font-weight:600";
-    const lc = document.createElement("input"); lc.type = "checkbox"; lc.checked = !!d.lease; lc.style.cssText = "width:22px;height:22px";
+  { const lw = document.createElement("label"); lw.style.cssText = "display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px";
+    const lc = document.createElement("input"); lc.type = "checkbox"; lc.checked = !!d.lease; lc.style.cssText = "width:20px;height:20px";
     lc.onchange = () => setLease(d, lc.checked);
-    const lt = document.createElement("span"); lt.innerHTML = "이 매장 매물 나옴 <span style='font-size:12px;font-weight:400;color:var(--muted)'>(현장에서 임대 매물 확인)</span>";
-    lw.append(lc, lt); el.appendChild(lw); }
+    const lt = document.createElement("span"); lt.innerHTML = "이 매장 매물 나옴 <span style='font-size:12px;color:var(--muted)'>(체크하면 월세·보증금·권리금·메모 입력)</span>";
+    lw.append(lc, lt); el.appendChild(lw);
+    const lf = d.lease && leaseF(d); if (lf) { lEditForm(flToL(lf), el, true); } }
 }
 function whoNow() { try { return sy.who === "이" || sy.who === "홍" ? sy.who : ""; } catch (e) { return ""; } }
 function fmtTs(ts) { return ts > 1e12 ? new Date(ts).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) : ""; }
@@ -981,7 +993,7 @@ function addCustom(a, local) {
   if (byKey(a.j + "|" + a.n)) return byKey(a.j + "|" + a.n);
   store.added.push(a); save();
   const d = mkCustom(a); DATA.push(d);
-  d.mla = d.la; d.mlo = d.lo; d.vis = !!store.visited[skey(d)]; d.cls = store.cls[skey(d)] || ""; d.lease = !!store.lease[skey(d)];
+  d.mla = d.la; d.mlo = d.lo; d.vis = !!store.visited[skey(d)]; d.cls = store.cls[skey(d)] || "";
   if (typeof naver !== "undefined" && map) {
     const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.mla, d.mlo), icon: { content: iconHtml(d), anchor: new naver.maps.Point(0, 0) }, zIndex: (isNew(d) || isStale(d)) ? 12 : 10 });
     naver.maps.Event.addListener(m, "click", () => select(d.id, false)); markers[d.id] = m;
@@ -1111,6 +1123,7 @@ function lMerge() {
   const fl = [...by.values()].filter((f) => !f.del).map(flToL);
   LMK.forEach((m) => { try { m && m.setMap(null); } catch (e) {} }); LMK = []; LIST = [...LBASE, ...fl];
   if (map && typeof naver !== "undefined") LIST.forEach((l, i) => { if (!l.la) return; const m = new naver.maps.Marker({ map, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 20, icon: { content: '<div class="lmk' + (l.field ? " fld" : "") + '"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) } }); naver.maps.Event.addListener(m, "click", () => selectListing(i)); LMK[i] = m; });
+  { const ids = new Set(fl.map((f) => f.fid)); let chg = false; DATA.forEach((d) => { const v = ids.has(leaseId(skey(d))); if (v !== !!d.lease) { d.lease = v; chg = true; } }); if (chg) { try { refresh(true); } catch (e) {} } }
   paintListings(); if (selectedL != null) renderDetail();
 }
 // 시트 저장: 기존 '기록' 탭에 한 줄로 저장(스크립트 수정 불필요). key = "매물|id|위도,경도", 오픈업 상태 칸 = 금액, 메모 = 기타 사항
@@ -1137,9 +1150,9 @@ function flSave(f, ch) {
   f.t = Date.now(); f.up = 0; save(); lMerge(); flFlush();
 }
 let lForm = null;  // 수정 중인 매물 id
-function lEditForm(l, el) {
+function lEditForm(l, el, inline) {
   const f = flGet(l.fid); if (!f) return;
-  const box = document.createElement("div"); box.style.cssText = "display:grid;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)";
+  const box = document.createElement("div"); box.style.cssText = "display:grid;gap:6px;margin-top:8px" + (inline ? "" : ";padding-top:10px;border-top:1px solid var(--line)");
   const inp = (ph, v, num) => { const i = document.createElement("input"); i.type = "text"; i.placeholder = ph; i.setAttribute("aria-label", ph); i.value = v == null ? "" : v; if (num) i.inputMode = "decimal"; i.style.cssText = "font-size:16px;padding:6px 8px;min-width:0;width:100%;box-sizing:border-box"; return i; };
   const iN = inp("매물명 (비우면 주소로 표시)", f.name), iR = inp("월세", withComma(f.rent), 1), iD = inp("보증금", withComma(f.dep), 1), iK = inp("권리금(억)", toEok(f.key), 1); [iR, iD, iK].forEach(commaLive);
   const iE = document.createElement("textarea"); iE.rows = 3; iE.placeholder = "기타 사항"; iE.value = f.note || ""; iE.style.cssText = "font-size:16px;padding:6px 8px;resize:vertical;font-family:inherit;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:6px";
@@ -1147,9 +1160,9 @@ function lEditForm(l, el) {
   const bt = document.createElement("div"); bt.style.cssText = "display:flex;gap:8px";
   const mk = (t, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = fn; return b; };
   const num = (i, u) => parseMoney(i.value, u);
-  bt.append(mk("저장", () => { lForm = null; flSave(f, { name: iN.value.trim(), rent: num(iR), dep: num(iD), key: num(iK, "eok"), note: iE.value.trim() }); }), mk("취소", () => { lForm = null; renderDetail(); }));
+  bt.append(mk("저장", () => { lForm = null; flSave(f, { name: inline ? f.name : iN.value.trim(), rent: num(iR), dep: num(iD), key: num(iK, "eok"), note: iE.value.trim() }); if (inline) renderDetail(); }), ...(inline ? [] : [mk("취소", () => { lForm = null; renderDetail(); })]));
   const u = document.createElement("div"); u.style.cssText = "font-size:11px;color:var(--muted);margin-top:-2px"; u.textContent = "월세 · 보증금은 만원, 권리금은 억 단위";
-  box.append(iN, row, u, iE, bt); el.appendChild(box);
+  box.append(...(inline ? [] : [iN]), row, u, iE, bt); el.appendChild(box);
 }
 let flBusy = false;
 async function flFlush() {
@@ -1158,6 +1171,7 @@ async function flFlush() {
     for (const f of store.fl.filter((x) => !x.up)) {
       const ts = Number(f.t) || Date.now(); f.t = ts;
       try {
+        if (f.del) { await syPost({ action: "set", key: flKey(f), name: f.name || f.addr, addr: f.addr, area: f.area, del: 1, ts }); for (const ok of (f.oldKeys || [])) await syPost({ action: "set", key: ok, name: f.name || f.addr, addr: f.addr, area: f.area, del: 1, ts }); store.fl = store.fl.filter((x) => x !== f); FLSHEET = FLSHEET.filter((x) => x.id !== f.id); ch++; continue; }
         for (const ok of (f.oldKeys || [])) await syPost({ action: "set", key: ok, name: f.name || f.addr, addr: f.addr, area: f.area, del: 1, ts });
         f.oldKeys = [];
         await syPost({ action: "set", key: flKey(f), name: f.name || f.addr, addr: f.addr, area: f.area, visited: 0, cls: flMoney(f), notes: f.note ? [{ id: f.id + "n", w: sy.who || "", t: f.note, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" }); f.up = 1; ch++; }
@@ -1170,7 +1184,7 @@ async function flFlush() {
 function rmLocal(k) {
   const x = store.added.find((a) => (a.j + "|" + a.n) === k);
   store.added = store.added.filter((a) => (a.j + "|" + a.n) !== k);
-  ["visited", "cls", "lease", "booth", "ts", "notes", "draft"].forEach((m) => { delete store[m][k]; });
+  ["visited", "cls", "booth", "ts", "notes", "draft"].forEach((m) => { delete store[m][k]; });
   store.removed[k] = store.removed[k] || { n: x ? x.n : k.split("|").slice(1).join("|"), j: k.slice(0, k.indexOf("|")), a: x ? AREAL[x.z] : "", ts: Date.now() };
   save();
 }
@@ -1188,7 +1202,7 @@ function buildCustomTools(d, el) {
     box.append(i, mkb("저장", () => {
       const n = i.value.trim(); if (!n) { msg.textContent = "이름을 입력하세요"; return; } if (n === d.n) { home(); return; }
       const ok = d.j + "|" + d.n, nk = d.j + "|" + n; if (byKey(nk)) { msg.textContent = "같은 이름이 이미 있습니다"; return; }
-      ["visited", "cls", "lease", "booth", "ts", "notes", "draft"].forEach((m) => { if (store[m][ok] !== undefined) { store[m][nk] = store[m][ok]; delete store[m][ok]; } });
+      ["visited", "cls", "booth", "ts", "notes", "draft"].forEach((m) => { if (store[m][ok] !== undefined) { store[m][nk] = store[m][ok]; delete store[m][ok]; } });
       const a = store.added.find((x) => (x.j + "|" + x.n) === ok); if (a) a.n = n;
       store.removed[ok] = { n: d.n, j: d.j, a: AREAL[d.z], ts: Date.now() }; delete store.removed[nk];
       d.n = n; save(); syq[ok] = 1; movePhotos(ok, nk); touch(d); refresh(); select(d.id, false);
@@ -1552,7 +1566,7 @@ async function syFlush() {
       if (rm) { await syPost({ action: "set", key: k, name: rm.n, addr: rm.j, area: rm.a || "", del: 1, ts: rm.ts }); delete syq[k]; syQSave(); continue; }
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
       const ts = store.ts[k] || Date.now();
-      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, vt: (store.vt || {})[k] || "", dev: isPhone() ? "폰" : "PC", cls: [CLSK[d.cls] || "", d.lease ? "매물" : ""].filter(Boolean).join("·"), notes: store.notes[k] || [], booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
+      await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, vt: (store.vt || {})[k] || "", dev: isPhone() ? "폰" : "PC", cls: CLSK[d.cls] || "", notes: store.notes[k] || [], booth: store.booth[k] || "", lat: d.custom ? d.la : "", lng: d.custom ? d.lo : "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
     }
     try { await syFlushPhotos(); } catch (e) { if (!Object.keys(syq).length) { sySt("메모는 저장됨 · 사진 올리기 실패(연결되면 자동 재시도)"); return; } throw e; }
@@ -1576,11 +1590,11 @@ async function syPull() {
       if ("booth" in w && !store.booth[w.key]) { const b0 = parseInt(w.booth, 10); if (b0 > 0) { store.booth[w.key] = b0; ch++; } }
       if (w.vt) { store.vt = store.vt || {}; const n0 = vtBetter(store.vt[w.key], String(w.vt)); if (n0 !== store.vt[w.key]) { store.vt[w.key] = n0; ch++; } }
       const ts = Number(w.ts) || 0; if (ts <= (store.ts[w.key] || 0)) return;
-      const wl = /매물/.test(String(w.cls || "")), v = Number(w.visited) ? 1 : 0, c = CLSV[String(w.cls || "").replace(/·?매물/, "").trim()] || "";
+      const v = Number(w.visited) ? 1 : 0, c = CLSV[w.cls] || "";
       if (v) store.visited[w.key] = 1; else delete store.visited[w.key];
-      if (c) store.cls[w.key] = c; else delete store.cls[w.key]; if (wl) store.lease[w.key] = 1; else delete store.lease[w.key];
+      if (c) store.cls[w.key] = c; else delete store.cls[w.key];
       if ("booth" in w) { const bn = parseInt(w.booth, 10); if (bn > 0) store.booth[w.key] = bn; }
-      store.ts[w.key] = ts; d.vis = !!v; d.cls = c; d.lease = wl; ch++;
+      store.ts[w.key] = ts; d.vis = !!v; d.cls = c; ch++;
     });
     if (!store.vtMig && vtNow().slice(0, 10) <= "2026-10-17") { store.vt = store.vt || {}; let nb = 0; Object.keys(store.visited).forEach((k) => { if (store.visited[k] && !store.vt[k] && byKey(k)) { store.vt[k] = "2026-10-16"; syq[k] = 1; nb++; } }); store.vtMig = 1; if (nb) { syQSave(); ch++; clearTimeout(syTimer); syTimer = setTimeout(syFlush, 800); } }
     applyOC();
@@ -1596,11 +1610,11 @@ document.querySelectorAll("#syWhoRow button").forEach((b) => { b.onclick = () =>
 $("#sySave").onclick = () => {
   sy = { url: $("#syUrl").value.trim(), token: $("#syTok").value.trim(), who: $("#syWho").value.trim() };
   try { localStorage.setItem(SYK, JSON.stringify(sy)); } catch (e) {}
-  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.lease), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
+  if (syOn()) { new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) syq[k] = 1; }); syQSave(); save(); }
   syAll();
 };
 $("#sySync").onclick = syAll;
-$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.lease), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
+$("#syRe").onclick = () => { if (!syOn()) { sySt("먼저 시트에 연결하세요"); return; } let n = 0; new Set([...Object.keys(store.visited), ...Object.keys(store.notes), ...Object.keys(store.cls), ...Object.keys(store.booth)]).forEach((k) => { if (!store.ts[k]) store.ts[k] = Date.now(); if (byKey(k)) { syq[k] = 1; n++; } }); syQSave(); save(); sySt("내 기록 " + n + "건을 다시 보냅니다…"); syFlush(); };
 function linkConnect(txt) {
   const m = /[#?&]sync=([A-Za-z0-9+\/=_%-]+)/.exec(String(txt || "")) || [null, String(txt || "").trim()];
   try { const o = dec(decodeURIComponent(m[1])); if (!(o && o.u && o.t)) throw 0;
