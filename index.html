@@ -201,8 +201,7 @@ body.fsb{overflow:hidden}
 .mk.nw.diff .d,.mk.old.diff .d{box-shadow:0 0 0 2px #c8590f}
 .mk.ouonly .d{border-radius:3px;transform:rotate(45deg)}
 .mk.sel .d{box-shadow:0 0 0 3px #0d6a8a}
-.mk.lease .d::before{content:"";position:absolute;right:-10px;top:-10px;width:11px;height:11px;border-radius:2px;transform:rotate(45deg);background:#e11d48;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);box-sizing:border-box}
-.mk.lease.ouonly .d::before{transform:none}
+.mk.lease .d{border-radius:3px;transform:none}
 .mk.vis .d::after{content:"✓";position:absolute;inset:0;font-size:10px;line-height:12px;text-align:center;color:#fff;font-weight:700}
 .mk.none.vis .d::after{color:#2f7d4f}
 .mk .l{display:none;position:absolute;left:11px;top:-8px;white-space:nowrap;font:500 11px var(--font-body);color:#16212b;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
@@ -272,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 121</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 122</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -314,7 +313,7 @@ body.fsb{overflow:hidden}
           <span class="it"><span class="dot warn"></span>같은 주소, 상호 다름</span>
           <span class="it"><span class="dot nw"></span>분홍 테두리 = 신규(오픈 12개월 이내)</span>
           <span class="it"><span class="dot old"></span>보라 테두리 = 과거 매출만(최신 아님)</span>
-          <span class="it"><span class="dot" style="position:relative;background:#9fb3c4"><span style="position:absolute;right:-6px;top:-6px;width:8px;height:8px;border-radius:2px;transform:rotate(45deg);background:#e11d48;border:1.5px solid #fff;box-sizing:border-box"></span></span>빨간 마름모 붙은 매장 = 그 매장 자리가 매물로 나옴</span>
+          <span class="it"><span class="dot" style="border-radius:2px;background:#4f9fb9"></span>네모 = 매물로 나온 사진매장 (색은 매출 기준 그대로)</span>
           <span class="it"><span class="dot" style="border-radius:2px;transform:rotate(45deg);background:#10b981;width:9px;height:9px"></span>초록 마름모 = 현장에서 등록한 매물 (주황 = 매물DB)</span>
         </div>
         </div>
@@ -776,7 +775,7 @@ function renderList() {
     if (selected === d.id) b.setAttribute("aria-current", "true");
     b.innerHTML = '<span class="zdot"></span><span><div class="nm"></div><div class="rd"></div></span><span class="rv"></span>';
     { const z = b.querySelector(".zdot"); if (d.hi == null) { z.style.background = "transparent"; z.style.border = "2px dashed #8b97a1"; } else { const t = Math.pow(Math.min(1, (d.hi + 400) / 5000), 0.75); z.style.background = "color-mix(in srgb, #c62828 " + Math.round(t * 100) + "%, #ffffff)"; z.style.border = "1px solid rgba(198,40,40,.45)"; } }
-    b.querySelector(".nm").textContent = d.n + (d.vis ? "  ✓" : "") + (d.lease ? "  ◆매물" : "");
+    b.querySelector(".nm").textContent = d.n + (d.vis ? "  ✓" : "") + (d.lease ? "  ■매물" : "");
     b.querySelector(".rd").textContent = AREAL[d.z] + " · " + (d.r || "현장 추가") + (d.dist != null ? " · " + fmtDist(d.dist) : "");
     const rv = b.querySelector(".rv"); rv.textContent = d.hi == null ? noneLabel(d) : (d.cls === "closed" ? "폐업 · " : "") + (d.mo ? d.mo + " " : "") + revText(d); if (d.hi == null) rv.classList.add("na"); else { const tr = trendOf(d); if (tr && TA[tr.k]) rv.insertAdjacentHTML("beforeend", " " + trendHtml(tr)); }
     b.onclick = () => select(d.id, true); box.appendChild(b);
