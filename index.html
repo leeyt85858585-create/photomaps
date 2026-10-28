@@ -271,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.23 · 118</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 120</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -682,6 +682,26 @@ function setLease(d, v) {
     else { const sh = FLSHEET.find((x) => x.id === id); f = sh ? Object.assign({}, sh, { up: 0, t: Date.now(), del: 0 }) : { id, name: d.n + " 매물", addr: d.j, area: AREAL[d.z] || "", rent: "", dep: "", key: "", note: "", la: d.la, lo: d.lo, date: vtNow().slice(0, 10), who: (sy && sy.who) || "", up: 0, t: Date.now() }; store.fl.push(f); }
   } else { const f = store.fl.find((x) => x.id === id) || FLSHEET.find((x) => x.id === id); if (f) { if (!store.fl.includes(f)) store.fl.push(Object.assign({}, f)); const g = store.fl.find((x) => x.id === id); g.del = 1; g.up = 0; g.t = Date.now(); } }
   save(); lMerge(); flFlush(); renderDetail();
+}
+// '이 매장 매물 나옴' 기능 전에 매장 자리에 따로 찍어 둔 매물(10/23 수동 입력분)을 매장 매물로 합친다.
+// 금액·메모를 매장 매물로 옮기고 수동 매물은 삭제 표시. 매장 매물이 이미 있으면 빈 칸만 채운다. 여러 기기에서 돌아도 같은 결과
+const LEASE_MERGE = [["Fmvknkw0j", "인생네컷 연남점"], ["Fmvkun0xx", "무드팔레트"], ["Fmvkunz2p", "엑시트 합정점"], ["Fmvkv68x3", "하루필름 합정점"], ["Fmvkvhsd2", "돈룩업 합정"]];
+function leaseMerge() {
+  let ch = 0;
+  LEASE_MERGE.forEach(([fid, sn]) => {
+    const src = FLSHEET.find((x) => x.id === fid && !x.del); if (!src) return;
+    if (store.fl.some((x) => x.id === fid && x.del)) return;
+    const d = DATA.find((x) => x.n === sn && !x.custom) || DATA.find((x) => x.n === sn); if (!d) return;
+    const id = leaseId(skey(d)), now = Date.now();
+    let f = store.fl.find((x) => x.id === id && !x.del) || null;
+    if (!f) { const sh = FLSHEET.find((x) => x.id === id && !x.del); f = sh ? Object.assign({}, sh) : { id, name: d.n + " 매물", addr: d.j, area: AREAL[d.z] || "", rent: "", dep: "", key: "", note: "", la: d.la, lo: d.lo, date: src.date || vtNow().slice(0, 10), who: src.who || "" }; store.fl = store.fl.filter((x) => x.id !== id); store.fl.push(f); }
+    ["rent", "dep", "key"].forEach((k) => { if ((f[k] === "" || f[k] == null) && src[k] !== "" && src[k] != null) f[k] = src[k]; });
+    if (src.note && !(f.note || "").includes(src.note)) f.note = f.note ? f.note + "\n" + src.note : src.note;
+    f.del = 0; f.up = 0; f.t = now;
+    const g = store.fl.find((x) => x.id === fid); if (g) Object.assign(g, { del: 1, up: 0, t: now }); else store.fl.push(Object.assign({}, src, { del: 1, up: 0, t: now }));
+    ch++;
+  });
+  if (ch) { save(); lMerge(); flFlush(); }
 }
 function setCls(d, v) { d.cls = v; const k = skey(d); if (v) store.cls[k] = v; else delete store.cls[k]; save(); touch(d); refresh(); renderDetail(); renderSheet(); }
 /* ---------- 사진 (이 기기 브라우저에 저장) ---------- */
@@ -1613,6 +1633,7 @@ async function syPull() {
   try {
     const j = await syPost({ action: "list" }); let ch = 0;
     { const nf = j.rows.filter((w) => String(w.key).startsWith(FLK) && !w.del).map(flFromRow).filter((f) => f.id && f.la); if (JSON.stringify(nf) !== JSON.stringify(FLSHEET)) { FLSHEET = nf; lMerge(); } }
+    try { leaseMerge(); } catch (e) {}
     j.rows.forEach((w) => {
       if (String(w.key).startsWith(FLK)) return;
       if (store.removed[w.key]) return;
