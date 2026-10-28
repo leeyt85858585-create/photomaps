@@ -1342,7 +1342,12 @@ function renderListing(l, el) {
         bx.append(t, mkb("위치 저장", async () => { try { const p = mk.getPosition(), la = p.lat(), lo = p.lng(); mk.setDraggable(false); lEdit = false; const f = flGet(l.fid); if (!f) return;
           const ad = await revAddr(la, lo); flSave(f, { la, lo, addr: ad || f.addr, area: AREAL[zOf(null, la, lo)] || f.area }); } catch (e) {} }),
           mkb("취소", () => { try { if (mk && l.old) { mk.setPosition(new naver.maps.LatLng(l.old[0], l.old[1])); mk.setDraggable(false); } } catch (e) {} lEdit = false; renderDetail(); }));
-      } else if (lForm !== l.fid) bx.append(mkb("내용 수정", () => { lForm = l.fid; renderDetail(); }), mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }));
+      } else if (lForm !== l.fid) { const dbtn = mkb("매물 삭제", () => {
+          if (dbtn.dataset.s !== "1") { dbtn.dataset.s = "1"; dbtn.textContent = "정말 삭제 (파트너 폰에서도 사라짐)"; dbtn.style.color = "#b42318"; return; }
+          const f = flGet(l.fid); if (!f) return; f.del = 1; f.up = 0; f.t = Date.now();
+          lForm = null; lEdit = false; selectedL = null; save(); lMerge(); flFlush(); renderDetail(); renderList(); paintListings();
+        });
+        bx.append(mkb("내용 수정", () => { lForm = l.fid; renderDetail(); }), mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }), dbtn); }
     } else if (!lEdit) bx.append(mkb("위치 수정", () => { lEdit = true; l.old = [l.la, l.lo]; try { if (mk) mk.setDraggable(true); } catch (e) {} renderDetail(); }));
     else { const t = document.createElement("span"); t.style.cssText = "font-size:12px;color:var(--muted)"; t.textContent = "지도의 주황 마름모를 끌어 옮기세요";
       bx.append(t, mkb("위치 저장", async () => { try { const p = mk.getPosition(); l.la = p.lat(); l.lo = p.lng(); mk.setDraggable(false); lEdit = false; LPOS[l.addr] = [l.la, l.lo]; renderDetail(); await syPost({ action: "listpos", addr: l.addr, lat: l.la, lng: l.lo }); } catch (e) { sySt("위치 저장 실패 (이 기기에는 저장됨)"); } }),
