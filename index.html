@@ -270,7 +270,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 124</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 125</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1029,7 +1029,6 @@ $("#cpbtn").onclick = async () => {
   catch (e) { try { document.execCommand("copy"); msg.textContent = "복사됐습니다. 카톡 대화창에 붙여넣어 보내세요."; } catch (e2) { msg.textContent = "위 글상자를 길게 눌러 '전체 선택 → 복사'한 뒤 카톡에 붙여넣으세요."; } }
 };
 $("#lgbtn").onclick = () => { const lg = $("#legend"); lg.hidden = !lg.hidden; $("#lgbtn").textContent = lg.hidden ? "범례 ▸" : "범례 ▾"; $("#lgbtn").setAttribute("aria-expanded", String(!lg.hidden)); };
-if (window.innerWidth > 920) $("#lgbtn").click();
 window.navermap_authFailure = () => { $("#err").style.display = "grid"; };
 
 
