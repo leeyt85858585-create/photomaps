@@ -183,7 +183,6 @@ body.fsb{overflow:hidden}
 .lmk{position:relative;width:0;height:0}
 .lmk .d{position:absolute;left:-6px;top:-6px;width:12px;height:12px;transform:rotate(45deg);background:#f59e0b;border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.45);box-sizing:border-box}
 .lmk.sel .d{background:#1b1300;border-color:#fbbf24}
-.lmk.fld .d{background:#10b981}
 #lhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
 #lhead .sm{font-weight:400;font-size:11px;color:var(--muted)}
 .lrow{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:8px 2px}
@@ -271,7 +270,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 123</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.28 · 124</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -313,7 +312,7 @@ body.fsb{overflow:hidden}
           <span class="it"><span class="dot nw"></span>분홍 테두리 = 신규(오픈 12개월 이내)</span>
           <span class="it"><span class="dot old"></span>보라 테두리 = 과거 매출만(최신 아님)</span>
           <span class="it"><span class="dot" style="border-radius:2px;background:#4f9fb9"></span>네모 = 매물로 나온 사진매장 (색은 매출 기준 그대로)</span>
-          <span class="it"><span class="dot" style="border-radius:2px;transform:rotate(45deg);background:#10b981;width:9px;height:9px"></span>초록 마름모 = 현장에서 등록한 매물 (주황 = 매물DB)</span>
+          <span class="it"><span class="dot" style="border-radius:2px;transform:rotate(45deg);background:#f59e0b;width:9px;height:9px"></span>주황 마름모 = 부동산 매물</span>
         </div>
         </div>
         <button id="addbtn" class="lgbtn" type="button">＋ 추가</button>
@@ -1362,7 +1361,7 @@ function renderListing(l, el) {
     const mkb = (t, f) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = t; b.onclick = f; return b; };
     const i = LIST.indexOf(l), mk = LMK[i];
     if (l.field) {
-      if (lEdit) { const t = document.createElement("span"); t.style.cssText = "font-size:12px;color:var(--muted)"; t.textContent = "지도의 초록 마름모를 끌어 옮기세요";
+      if (lEdit) { const t = document.createElement("span"); t.style.cssText = "font-size:12px;color:var(--muted)"; t.textContent = "지도의 주황 마름모를 끌어 옮기세요";
         bx.append(t, mkb("위치 저장", async () => { try { const p = mk.getPosition(), la = p.lat(), lo = p.lng(); mk.setDraggable(false); lEdit = false; const f = flGet(l.fid); if (!f) return;
           const ad = await revAddr(la, lo); flSave(f, { la, lo, addr: ad || f.addr, area: AREAL[zOf(null, la, lo)] || f.area }); } catch (e) {} }),
           mkb("취소", () => { try { if (mk && l.old) { mk.setPosition(new naver.maps.LatLng(l.old[0], l.old[1])); mk.setDraggable(false); } } catch (e) {} lEdit = false; renderDetail(); }));
