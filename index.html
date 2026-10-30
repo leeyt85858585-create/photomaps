@@ -271,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.30 · 132</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.30 · 133</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -543,6 +543,9 @@ const FRESH = "26.10.30";
 const isFresh = (d) => !!(d.ox && d.ox.c === FRESH);
 const isNew = (d) => !!(d.ox && d.ox.m && !/이상/.test(d.ox.m));
 const isStale = (d) => d.hi != null && isOld(d);
+const baseYM = (d) => { const m = d.ox && d.ox.b && /(\d+)년 (\d+)월/.exec(d.ox.b); if (m) return { y: +m[1], m: +m[2] }; const mo = parseInt(d.mo || "8", 10) || 8; return { y: 26, m: mo }; };
+const shiftYM = (b, k) => { const t = b.y * 12 + (b.m - 1) + k; return { y: Math.floor(t / 12), m: (t % 12) + 1 }; };
+const lblYM = (p, cur) => (p.y !== cur.y ? p.y + "년 " : "") + p.m + "월";
 const moYM = (d) => "26." + String(d.mo).replace("월", "").padStart(2, "0");
 let store = { visited: {}, memo: {}, cls: {} };
 try { const raw = localStorage.getItem(SKEY); if (raw) store = Object.assign(store, JSON.parse(raw)); } catch (e) {}
@@ -820,16 +823,17 @@ function renderDetail() {
     }
   } else if (d.custom) { const jm = String(d.j).match(/\((.+)\)\s*$/); if (d.r) row("도로명", d.r); if (jm) row("지번", jm[1]); if (!d.r) row("주소", d.j); }
   else if (d.r) row("도로명", d.r); else row("주소", d.j);
-  if (d.on) { row("오픈업", d.on); row("26년 " + (d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); { const hs = histOf(d); if (d.hi != null) hs.slice().reverse().forEach((h) => { const df = d.hi - h.hi; row("26년 " + h.mo + " 매출", revStr(h.rev) + " 만원 (" + (df > 0 ? "+" : df < 0 ? "-" : "±") + fmt(Math.abs(df)) + "만원 " + moChg(h.hi, d.hi) + ")", "num"); }); } if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
+  if (d.on) { row("오픈업", d.on); { const cur = baseYM(d); row(lblYM(cur, cur) + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); const hs = histOf(d); if (d.hi != null) hs.slice().reverse().forEach((h) => { const df = d.hi - h.hi; const hp = { y: h.y || cur.y, m: parseInt(h.mo, 10) }; row(lblYM(hp, cur) + " 매출", revStr(h.rev) + " 만원 (" + (df > 0 ? "+" : df < 0 ? "-" : "±") + fmt(Math.abs(df)) + "만원 " + moChg(h.hi, d.hi) + ")", "num"); }); } if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
   else row("오픈업", noneFull(d));
   { const tr = trendOf(d), t12 = d.ox && d.ox.tr;
     if (t12 && t12.length === 12) {
       const t = document.createElement("dt"); t.textContent = "12개월 추이"; const v = document.createElement("dd");
       const w = 132, hh = 28, bw = w / 12;
-      let svg = '<svg class="spark" width="' + w + '" height="' + hh + '" viewBox="0 0 ' + w + " " + hh + '" role="img" aria-label="25.09~26.08 월별 매출 상대 높이">';
+      const bs = baseYM(d), st = shiftYM(bs, -11), p2 = (n) => String(n).padStart(2, "0"), rngTxt = st.y + "." + p2(st.m) + " → " + bs.y + "." + p2(bs.m), r3 = (e) => shiftYM(bs, e).m + "월", recT = shiftYM(bs, -2).m + "~" + bs.m + "월", preT = shiftYM(bs, -5).m + "~" + shiftYM(bs, -3).m + "월";
+      let svg = '<svg class="spark" width="' + w + '" height="' + hh + '" viewBox="0 0 ' + w + " " + hh + '" role="img" aria-label="' + rngTxt + ' 월별 매출 상대 높이">';
       t12.forEach((x, i) => { const bh = Math.max(1, x / 100 * (hh - 2)); svg += '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (hh - bh).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + bh.toFixed(1) + '" fill="' + (i >= 9 ? "var(--accent)" : "var(--muted)") + '" opacity="' + (i >= 9 ? 1 : 0.45) + '"></rect>'; });
       svg += "</svg>";
-      v.innerHTML = (tr ? (tr.k === "new" ? "비교 불가 (신규 · 3~5월 매출 없음)" : trendHtml(tr) + " " + (tr.r > 0 ? "+" : "") + tr.r + "% <span style='font-size:11px;color:var(--muted)'>(6~8월 vs 3~5월)</span>") : "") + svg + "<span style='font-size:11px;color:var(--muted)'>25.09 → 26.08 · 막대 높이는 이 매장 최고월=100 기준</span>";
+      v.innerHTML = (tr ? (tr.k === "new" ? "비교 불가 (신규 · " + preT + " 매출 없음)" : trendHtml(tr) + " " + (tr.r > 0 ? "+" : "") + tr.r + "% <span style='font-size:11px;color:var(--muted)'>(" + recT + " vs " + preT + ")</span>") : "") + svg + "<span style='font-size:11px;color:var(--muted)'>" + rngTxt + " · 막대 높이는 이 매장 최고월=100 기준</span>";
       dl.append(t, v);
     }
     const bb = bOf(d), bi = BRANDS[bb];
