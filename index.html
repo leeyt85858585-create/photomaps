@@ -271,7 +271,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.30 · 131</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.10.30 · 132</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -820,7 +820,7 @@ function renderDetail() {
     }
   } else if (d.custom) { const jm = String(d.j).match(/\((.+)\)\s*$/); if (d.r) row("도로명", d.r); if (jm) row("지번", jm[1]); if (!d.r) row("주소", d.j); }
   else if (d.r) row("도로명", d.r); else row("주소", d.j);
-  if (d.on) { row("오픈업", d.on); row((d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); { const hs = histOf(d); if (d.hi != null && hs.length) row("월별 매출", hs.map((h) => h.mo + " " + revStr(h.rev)).concat([d.mo + " " + revText(d)]).join(" → ") + " 만원 " + moChg(hs[hs.length - 1].hi, d.hi), "num"); } if (d.hi != null) row("추정 실매출", "약 " + (d.hi + 400).toLocaleString() + " 만원 (오픈업 상한+400)", "num"); if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
+  if (d.on) { row("오픈업", d.on); row("26년 " + (d.mo || "8월") + " 매출", d.hi == null ? "—" : revText(d) + " 만원", "num"); { const hs = histOf(d); if (d.hi != null) hs.slice().reverse().forEach((h) => { const df = d.hi - h.hi; row("26년 " + h.mo + " 매출", revStr(h.rev) + " 만원 (" + (df > 0 ? "+" : df < 0 ? "-" : "±") + fmt(Math.abs(df)) + "만원 " + moChg(h.hi, d.hi) + ")", "num"); }); } if (d.orr && d.r && d.orr.replace(/\s/g,"") !== d.r.replace(/\s/g,"")) row("⚠ 오픈업 주소 다름", d.orr); }
   else row("오픈업", noneFull(d));
   { const tr = trendOf(d), t12 = d.ox && d.ox.tr;
     if (t12 && t12.length === 12) {
