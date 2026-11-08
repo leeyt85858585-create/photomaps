@@ -273,7 +273,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.08 · 142</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.08 · 143</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1004,7 +1004,7 @@ function hull(pts) {
 
 // 짐보관·사물함 레이어 (사진매장 DATA·권역 통계와 분리)
 const LOCK = [{"n":"러기지라운지 북촌락커","c":"보관,저장","j":"종로구 경운동 89-4 102동 1층 108호","r":"삼일대로 461","la":37.5757373,"lo":126.9856119,"ou":"오픈업 미등록"},{"n":"러기지라운지 안국락커","c":"보관,저장","j":"종로구 운니동 98-20 1층 101호","r":"율곡로 82","la":37.5771893,"lo":126.9881542,"ou":"오픈업 미등록"},{"n":"스테이스테이","c":"카페,디저트","h":"24시간 영업","j":"종로구 동숭동 1-44","r":"동숭길 113","la":37.5829764,"lo":127.0035861,"ou":"오픈업 미등록"},{"n":"낙산 물품보관소","c":"임대,대여","h":"24시간 영업","j":"종로구 동숭동 1-147 1층 7호","r":"동숭길 51","la":37.5805387,"lo":127.004202,"ou":"오픈업 미등록"},{"n":"댕로사물함","c":"보관,저장","h":"24시간 영업","j":"종로구 동숭동 1-83 1층","r":"동숭길 101","la":37.5824723,"lo":127.0040093,"ou":"오픈업 미등록"},{"n":"놓고가 사물함","c":"장소대여","h":"24시간 영업","j":"종로구 동숭동 1-67 1층 2-1호","r":"대학로10길 17","la":37.5820934,"lo":127.0031735,"ou":"오픈업 미등록"},{"n":"연뮤덕사물함","c":"보관,저장","h":"24시간 영업","j":"종로구 동숭동 1-43 1층","r":"동숭길 117","la":37.5831728,"lo":127.0034773,"ou":"오픈업 미등록"}];
-let LKM = [], lkOn = true, lkIw = null;
+let LKM = [], lkOn = true, lkIw = null, lkIwFor = null;
 function lkEsc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function initLockers() {
   if (!map || typeof naver === "undefined") return;
@@ -1012,14 +1012,16 @@ function initLockers() {
   LKM = LOCK.map((l) => {
     const m = new naver.maps.Marker({ map: lkOn ? map : null, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 8, title: l.n, icon: { content: '<div class="lkmk">보</div>', anchor: new naver.maps.Point(0, 0) } });
     naver.maps.Event.addListener(m, "click", () => {
+      if (lkIw && lkIw.getMap() && lkIwFor === m) { lkIw.close(); lkIwFor = null; return; }
       if (!lkIw) lkIw = new naver.maps.InfoWindow({ content: "", borderWidth: 1, borderColor: "#9aa5b1", anchorSize: new naver.maps.Size(8, 8), pixelOffset: new naver.maps.Point(0, -8) });
       lkIw.setContent('<div class="lkiw"><b>' + lkEsc(l.n) + '</b><div>' + lkEsc(l.c) + (l.h ? " · " + lkEsc(l.h) : "") + (l.ou ? " · " + lkEsc(l.ou) : "") + '</div><div>' + lkEsc(l.r) + '</div><div class="sub">' + lkEsc(l.j) + "</div></div>");
-      lkIw.open(map, m);
+      lkIw.open(map, m); lkIwFor = m;
     });
     return m;
   });
+  naver.maps.Event.addListener(map, "click", () => { if (lkIw) { lkIw.close(); lkIwFor = null; } });
   const cb = document.getElementById("lkchk");
-  if (cb) { cb.checked = lkOn; cb.onchange = () => { lkOn = cb.checked; try { localStorage.setItem("photomaps_lk", lkOn ? "1" : "0"); } catch (e) {} LKM.forEach((m) => m.setMap(lkOn ? map : null)); if (!lkOn && lkIw) lkIw.close(); }; }
+  if (cb) { cb.checked = lkOn; cb.onchange = () => { lkOn = cb.checked; try { localStorage.setItem("photomaps_lk", lkOn ? "1" : "0"); } catch (e) {} LKM.forEach((m) => m.setMap(lkOn ? map : null)); if (!lkOn && lkIw) { lkIw.close(); lkIwFor = null; } }; }
 }
 function initMap() {
   map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: false });
