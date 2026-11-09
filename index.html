@@ -183,7 +183,7 @@ body.fsb{overflow:hidden}
 .lmk{position:relative;width:0;height:0}
 .lkmk{position:relative;width:0;height:0;font-size:0}.lkmk::after{content:"보";position:absolute;left:-8px;top:-8px;width:16px;height:16px;line-height:16px;text-align:center;font-size:9px;font-weight:700;color:#fff;border-radius:50%;background:#64748b;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);box-sizing:border-box}
 .lkiw{padding:8px 10px;font-size:12px;line-height:1.45;color:#16212b;max-width:220px}.lkiw .sub{color:#6f7e8a;font-size:11px}.lkiw .op{color:#ec4899;font-weight:700}
-.lkf{display:grid;gap:6px;margin-top:10px}.lkf label{font-size:13px;font-weight:600}.lkf .sub{font-weight:400;color:var(--muted);font-size:12px}.lkf input{font-size:16px;padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink)}.lkf textarea{font-size:16px}.lkf .row{display:flex;gap:10px;align-items:center}.lkf .row .sub{font-size:12px}
+.lkadj{display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:14px}.lkadj .sub{font-size:12px;color:var(--muted)}.lkf{display:grid;gap:6px;margin-top:10px}.lkf label{font-size:13px;font-weight:600}.lkf .sub{font-weight:400;color:var(--muted);font-size:12px}.lkf input{font-size:16px;padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink)}.lkf textarea{font-size:16px}.lkf .row{display:flex;gap:10px;align-items:center}.lkf .row .sub{font-size:12px}
 .lmk .d{position:absolute;left:-6px;top:-6px;width:12px;height:12px;transform:rotate(45deg);background:#f59e0b;border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.45);box-sizing:border-box}
 .lmk.sel .d{background:#1b1300;border-color:#fbbf24}
 #lhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
@@ -274,7 +274,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 149</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 150</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -904,7 +904,7 @@ function renderDetail() {
 // 위치 미세조정: 핀을 끌거나 지도를 탭해 옮긴 뒤 저장 (매장 키별로 기록, 시트 위도·경도 칸으로 동기화)
 let adjMk = null, adjBar = null, adjBound = false, adjCur = null;
 function endAdjust() { try { if (adjMk) adjMk.setMap(null); } catch (e) {} adjMk = null; adjCur = null; if (adjBar) { adjBar.remove(); adjBar = null; } }
-function startAdjust(d) {
+function startAdjust(d, o) {
   if (!map || typeof naver === "undefined") return; endAdjust();
   const pin = '<div style="font-size:30px;line-height:30px;transform:translate(-50%,-100%);filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))">📍</div>';
   adjMk = new naver.maps.Marker({ map, position: new naver.maps.LatLng(d.la, d.lo), draggable: true, zIndex: 99, icon: { content: pin, anchor: new naver.maps.Point(0, 0) } });
@@ -918,6 +918,7 @@ function startAdjust(d) {
   const row = document.createElement("div"); row.style.cssText = "display:flex;gap:8px";
   const mk = (txt, fn) => { const b = document.createElement("button"); b.type = "button"; b.className = "lgbtn"; b.textContent = txt; b.onclick = fn; b.style.flex = "1"; return b; };
   row.append(mk("위치 저장", () => {
+    if (o && o.save) { o.save(adjCur[0], adjCur[1]); endAdjust(); return; }
     const k = skey(d); d.la = adjCur[0]; d.lo = adjCur[1]; d.mla = d.la; d.mlo = d.lo; store.pos[k] = [d.la, d.lo];
     try { markers[d.id] && markers[d.id].setPosition(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {}
     rebuildZone(d.z); save(); touch(d); endAdjust(); renderDetail();
@@ -1012,6 +1013,8 @@ const lkKey = (l) => LKK + l.n + "|" + (+l.la).toFixed(6) + "," + (+l.lo).toFixe
 store.lk = store.lk || {};
 let lkBusy = false;
 function lkInfo(l) { return store.lk[lkKey(l)] || {}; }
+function lkPos(l) { const p = lkInfo(l).pos; return (Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])) ? p : [l.la, l.lo]; }
+function lkMoveMarker(l) { try { const i = LOCK.indexOf(l), m = LKM[i]; if (!m) return; const p = lkPos(l); m.setPosition(new naver.maps.LatLng(p[0], p[1])); if (lkIw && lkIwFor === m) { lkIw.close(); lkIwFor = null; } } catch (e) {} }
 function lkIwHtml(l) { const x = lkInfo(l); return '<div class="lkiw"><b>' + lkEsc(l.n) + '</b><div>' + lkEsc(l.c) + (l.h ? " · " + lkEsc(l.h) : "") + (l.ou ? " · " + lkEsc(l.ou) : "") + '</div>' + (x.open ? '<div class="op">오픈 ' + lkEsc(x.open) + '</div>' : "") + '<div>' + lkEsc(l.r) + '</div><div class="sub">' + lkEsc(l.j) + '</div><div class="sub">상세 칸에서 오픈 시기·메모 입력</div></div>'; }
 function selectLocker(i) {
   const prev = selected; selected = null; if (prev != null) { try { setIcon(prev); } catch (e) {} }
@@ -1025,7 +1028,8 @@ function renderLocker(l, el) {
   el.innerHTML = '<h2></h2><div class="badges"><span class="badge">짐보관·사물함</span></div><dl></dl><div class="links"></div>'
     + '<div class="lkf"><label>오픈 시기 <span class="sub">(네이버·카카오 지도에서 확인)</span></label><input id="lkOpen" type="text" placeholder="예: 2025.03 / 2025년 봄 / 리뷰 첫 등록 2024.11">'
     + '<label>메모</label><textarea id="lkMemo" rows="4" placeholder="크기·칸 수, 가격, 관리 상태, 주변 동선 등"></textarea>'
-    + '<div class="row"><button type="button" class="lgbtn" id="lkSave">저장</button><span class="sub" id="lkSt"></span></div></div>';
+    + '<div class="row"><button type="button" class="lgbtn" id="lkSave">저장</button><span class="sub" id="lkSt"></span></div></div>'
+    + '<div class="lkadj"><button type="button" class="lgbtn" id="lkAdj">📍 위치 미세조정</button><span class="sub" id="lkAdjSt"></span></div>';
   el.querySelector("h2").textContent = l.n;
   const dl = el.querySelector("dl"); const row = (a, b) => { if (!b) return; const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; dl.append(t, v); };
   row("업종", l.c); row("영업", l.h); row("도로명", l.r); row("지번", l.j); row("오픈업", l.ou);
@@ -1034,8 +1038,16 @@ function renderLocker(l, el) {
   io.value = x.open || ""; im.value = x.memo || "";
   const stTxt = () => { const y = lkInfo(l); if (!y.t) return syOn() ? "" : "시트 미연결 — 이 기기에만 저장됨"; const d = new Date(+y.t); return "저장 " + (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + (y.who ? " · " + y.who : "") + (y.up ? "" : (syOn() ? " · 시트 전송 대기" : " · 이 기기에만 저장")); };
   st.textContent = stTxt();
+  el.querySelector("#lkAdjSt").textContent = x.pos ? "조정됨" : "";
+  el.querySelector("#lkAdj").onclick = () => {
+    const p = lkPos(l);
+    startAdjust({ n: l.n, la: p[0], lo: p[1], ola: l.la, olo: l.lo }, { save: (a, b) => {
+      store.lk[k] = Object.assign({}, store.lk[k] || {}, { pos: [a, b], t: Date.now(), who: (sy && sy.who) || "", up: 0 }); save();
+      lkMoveMarker(l); renderDetail(); lkFlush().then(() => { if (selectedK != null && LOCK[selectedK] === l) renderDetail(); });
+    } });
+  };
   el.querySelector("#lkSave").onclick = () => {
-    store.lk[k] = { open: io.value.trim(), memo: im.value.trim(), t: Date.now(), who: (sy && sy.who) || "", up: 0 }; save();
+    store.lk[k] = Object.assign({}, store.lk[k] || {}, { open: io.value.trim(), memo: im.value.trim(), t: Date.now(), who: (sy && sy.who) || "", up: 0 }); save();
     st.textContent = stTxt(); try { if (lkIw && lkIwFor === LKM[LOCK.indexOf(l)]) lkIw.setContent(lkIwHtml(l)); } catch (e) {}
     lkFlush().then(() => { if (selectedK != null && LOCK[selectedK] === l) st.textContent = stTxt(); });
   };
@@ -1046,7 +1058,7 @@ async function lkFlush() {
     for (const l of LOCK) {
       const k = lkKey(l), x = store.lk[k]; if (!x || x.up) continue;
       const ts = Number(x.t) || Date.now();
-      await syPost({ action: "set", key: k, name: l.n, addr: l.j, area: "짐보관", visited: 0, cls: x.open ? "오픈 " + x.open : "", notes: x.memo ? [{ id: k + "|m", w: x.who || "", t: x.memo, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" });
+      await syPost({ action: "set", key: k, name: l.n, addr: l.j, area: "짐보관" + (Array.isArray(x.pos) ? " @" + (+x.pos[0]).toFixed(7) + "," + (+x.pos[1]).toFixed(7) : ""), visited: 0, cls: x.open ? "오픈 " + x.open : "", notes: x.memo ? [{ id: k + "|m", w: x.who || "", t: x.memo, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" });
       if ((Number(store.lk[k].t) || 0) === ts) store.lk[k].up = 1; save();
     }
   } catch (e) { sySt("보관소 메모 시트 저장 실패 (이 기기에는 저장됨, 다음 동기화 때 재시도)"); }
@@ -1059,7 +1071,9 @@ function lkFromRows(rows) {
     const loc = store.lk[k]; if (loc && !loc.up) return;
     const ts = Number(w.ts) || 0; if (loc && ts <= (Number(loc.t) || 0)) return;
     const ns = (Array.isArray(w.notes) ? w.notes : []).filter((n) => n && !n.del);
-    store.lk[k] = { open: String(w.cls || "").replace(/^오픈\s*/, ""), memo: ns.map((n) => String(n.t || "")).join("\n"), t: ts, who: (ns[0] && ns[0].w) || "", up: 1 }; ch++;
+    const pm = /@\s*([\d.]+)\s*,\s*([\d.]+)/.exec(String(w.area || "")), pos = pm ? [+pm[1], +pm[2]] : undefined;
+    store.lk[k] = { open: String(w.cls || "").replace(/^오픈\s*/, ""), memo: ns.map((n) => String(n.t || "")).join("\n"), t: ts, who: (ns[0] && ns[0].w) || "", up: 1 }; if (pos) store.lk[k].pos = pos; ch++;
+    { const l = LOCK.find((y) => lkKey(y) === k); if (l) lkMoveMarker(l); }
   });
   if (ch) { save(); const a = document.activeElement; if (selectedK != null && !(a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && /^lk/.test(a.id))) renderDetail(); }
   return ch;
@@ -1071,7 +1085,8 @@ function initLockers() {
   const lkSeen = {};
   LKM = LOCK.map((l) => {
     const pk = (+l.la).toFixed(6) + "," + (+l.lo).toFixed(6), dup = lkSeen[pk] = (lkSeen[pk] || 0) + 1;  // 같은 건물(좌표)이면 옆으로 비켜 그림
-    const m = new naver.maps.Marker({ map: lkOn ? map : null, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 8, title: l.n, icon: { content: '<div class="lkmk" style="left:' + ((dup - 1) * 17) + 'px">보</div>', anchor: new naver.maps.Point(0, 0) } });
+    const p0 = lkPos(l);
+    const m = new naver.maps.Marker({ map: lkOn ? map : null, position: new naver.maps.LatLng(p0[0], p0[1]), zIndex: 8, title: l.n, icon: { content: '<div class="lkmk" style="left:' + ((dup - 1) * 17) + 'px">보</div>', anchor: new naver.maps.Point(0, 0) } });
     naver.maps.Event.addListener(m, "click", () => {
       if (lkIw && lkIw.getMap() && lkIwFor === m) { lkIw.close(); lkIwFor = null; return; }
       selectLocker(LOCK.indexOf(l));
