@@ -274,7 +274,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 146</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 147</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1084,7 +1084,11 @@ function initLockers() {
   if (cb) { cb.checked = lkOn; cb.onchange = () => { lkOn = cb.checked; try { localStorage.setItem("photomaps_lk", lkOn ? "1" : "0"); } catch (e) {} LKM.forEach((m) => m.setMap(lkOn ? map : null)); if (!lkOn && lkIw) { lkIw.close(); lkIwFor = null; } }; }
 }
 function initMap() {
-  map = new naver.maps.Map("map", { center: new naver.maps.LatLng(37.5565, 126.9215), zoom: 15, zoomControl: false });
+  // 마지막에 보던 지도 위치·확대 수준을 이 기기에 기억해 두었다가 새로고침 때 그대로 연다 (없으면 홍대)
+  let c0 = new naver.maps.LatLng(37.5565, 126.9215), z0 = 15;
+  try { const v = JSON.parse(localStorage.getItem("photomaps_view") || "null"); if (v && isFinite(v.la) && isFinite(v.lo) && v.la > 33 && v.la < 39 && v.lo > 124 && v.lo < 132) { c0 = new naver.maps.LatLng(+v.la, +v.lo); z0 = Math.min(21, Math.max(7, Math.round(+v.z) || 15)); } } catch (e) {}
+  map = new naver.maps.Map("map", { center: c0, zoom: z0, zoomControl: false });
+  naver.maps.Event.addListener(map, "idle", () => { try { const c = map.getCenter(); localStorage.setItem("photomaps_view", JSON.stringify({ la: +c.lat().toFixed(6), lo: +c.lng().toFixed(6), z: map.getZoom() })); } catch (e) {} });
   try { initLockers(); } catch (e) {}
   AREAS.forEach(([z, label, col0]) => {
     const pts = DATA.filter(d => d.z === z).map(d => ({ x: d.lo, y: d.la }));
