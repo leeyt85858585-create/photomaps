@@ -182,7 +182,8 @@ body.fsb{overflow:hidden}
 #map{width:100%;height:100%}
 .lmk{position:relative;width:0;height:0}
 .lkmk{position:relative;width:0;height:0;font-size:0}.lkmk::after{content:"보";position:absolute;left:-8px;top:-8px;width:16px;height:16px;line-height:16px;text-align:center;font-size:9px;font-weight:700;color:#fff;border-radius:50%;background:#64748b;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);box-sizing:border-box}
-.lkiw{padding:8px 10px;font-size:12px;line-height:1.45;color:#16212b;max-width:220px}.lkiw .sub{color:#6f7e8a;font-size:11px}
+.lkiw{padding:8px 10px;font-size:12px;line-height:1.45;color:#16212b;max-width:220px}.lkiw .sub{color:#6f7e8a;font-size:11px}.lkiw .op{color:#ec4899;font-weight:700}
+.lkf{display:grid;gap:6px;margin-top:10px}.lkf label{font-size:13px;font-weight:600}.lkf .sub{font-weight:400;color:var(--muted);font-size:12px}.lkf input{font-size:16px;padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink)}.lkf textarea{font-size:16px}.lkf .row{display:flex;gap:10px;align-items:center}.lkf .row .sub{font-size:12px}
 .lmk .d{position:absolute;left:-6px;top:-6px;width:12px;height:12px;transform:rotate(45deg);background:#f59e0b;border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.45);box-sizing:border-box}
 .lmk.sel .d{background:#1b1300;border-color:#fbbf24}
 #lhead{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:0;padding:0;font-size:13px;font-weight:700;cursor:pointer;text-align:left}
@@ -273,7 +274,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.08 · 143</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 144</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -816,6 +817,7 @@ function renderList() {
 }
 function renderDetail() {
   const el = $("#detail");
+  if (selectedK != null && LOCK[selectedK]) { revokeThumbs(); renderLocker(LOCK[selectedK], el); return; }
   if (selectedL != null && LIST[selectedL]) { revokeThumbs(); renderListing(LIST[selectedL], el); return; }
   if (selected == null) { revokeThumbs(); el.innerHTML = '<div class="empty">지도의 점이나 목록의 매장을 누르면 상세가 여기에 나옵니다.</div>'; return; }
   const d = DATA[selected], k = skey(d);
@@ -980,7 +982,7 @@ function buildCmp() {
 }
 function select(id, fromList) {
   if (syOn() && Date.now() - lastPull > 4000) syPull();
-  fsHidden = false; if (selectedL != null) { selectedL = null; paintListings(); } const prev = selected; selected = id; renderDetail(); renderList(); renderSheet(); try { fsInfo(); } catch (e) {}
+  fsHidden = false; selectedK = null; if (selectedL != null) { selectedL = null; paintListings(); } const prev = selected; selected = id; renderDetail(); renderList(); renderSheet(); try { fsInfo(); } catch (e) {}
   if (prev != null) setIcon(prev);
   setIcon(id);
   if (fromList && window.innerWidth <= 920) { try { document.querySelector(".mapcard").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} }
@@ -1004,7 +1006,64 @@ function hull(pts) {
 
 // 짐보관·사물함 레이어 (사진매장 DATA·권역 통계와 분리)
 const LOCK = [{"n":"러기지라운지 북촌락커","c":"보관,저장","j":"종로구 경운동 89-4 102동 1층 108호","r":"삼일대로 461","la":37.5757373,"lo":126.9856119,"ou":"오픈업 미등록"},{"n":"러기지라운지 안국락커","c":"보관,저장","j":"종로구 운니동 98-20 1층 101호","r":"율곡로 82","la":37.5771893,"lo":126.9881542,"ou":"오픈업 미등록"},{"n":"스테이스테이","c":"카페,디저트","h":"24시간 영업","j":"종로구 동숭동 1-44","r":"동숭길 113","la":37.5829764,"lo":127.0035861,"ou":"오픈업 미등록"},{"n":"낙산 물품보관소","c":"임대,대여","h":"24시간 영업","j":"종로구 동숭동 1-147 1층 7호","r":"동숭길 51","la":37.5805387,"lo":127.004202,"ou":"오픈업 미등록"},{"n":"댕로사물함","c":"보관,저장","h":"24시간 영업","j":"종로구 동숭동 1-83 1층","r":"동숭길 101","la":37.5824723,"lo":127.0040093,"ou":"오픈업 미등록"},{"n":"놓고가 사물함","c":"장소대여","h":"24시간 영업","j":"종로구 동숭동 1-67 1층 2-1호","r":"대학로10길 17","la":37.5820934,"lo":127.0031735,"ou":"오픈업 미등록"},{"n":"연뮤덕사물함","c":"보관,저장","h":"24시간 영업","j":"종로구 동숭동 1-43 1층","r":"동숭길 117","la":37.5831728,"lo":127.0034773,"ou":"오픈업 미등록"}];
-let LKM = [], lkOn = true, lkIw = null, lkIwFor = null;
+let LKM = [], lkOn = true, lkIw = null, lkIwFor = null, selectedK = null;
+const LKK = "보관|";
+const lkKey = (l) => LKK + l.n + "|" + (+l.la).toFixed(6) + "," + (+l.lo).toFixed(6);
+store.lk = store.lk || {};
+let lkBusy = false;
+function lkInfo(l) { return store.lk[lkKey(l)] || {}; }
+function lkIwHtml(l) { const x = lkInfo(l); return '<div class="lkiw"><b>' + lkEsc(l.n) + '</b><div>' + lkEsc(l.c) + (l.h ? " · " + lkEsc(l.h) : "") + (l.ou ? " · " + lkEsc(l.ou) : "") + '</div>' + (x.open ? '<div class="op">오픈 ' + lkEsc(x.open) + '</div>' : "") + '<div>' + lkEsc(l.r) + '</div><div class="sub">' + lkEsc(l.j) + '</div><div class="sub">상세 칸에서 오픈 시기·메모 입력</div></div>'; }
+function selectLocker(i) {
+  const prev = selected; selected = null; if (prev != null) { try { setIcon(prev); } catch (e) {} }
+  if (selectedL != null) { selectedL = null; try { paintListings(); } catch (e) {} }
+  selectedK = i; fsHidden = false; renderDetail(); try { renderList(); } catch (e) {} try { fsInfo(); } catch (e) {}
+}
+function renderLocker(l, el) {
+  const k = lkKey(l), x = lkInfo(l);
+  const kakao = "https://map.kakao.com/link/map/" + encodeURIComponent(l.n) + "," + l.la + "," + l.lo;
+  const nv = "https://map.naver.com/p/search/" + encodeURIComponent(l.n);
+  el.innerHTML = '<h2></h2><div class="badges"><span class="badge">짐보관·사물함</span></div><dl></dl><div class="links"></div>'
+    + '<div class="lkf"><label>오픈 시기 <span class="sub">(네이버·카카오 지도에서 확인)</span></label><input id="lkOpen" type="text" placeholder="예: 2025.03 / 2025년 봄 / 리뷰 첫 등록 2024.11">'
+    + '<label>메모</label><textarea id="lkMemo" rows="4" placeholder="크기·칸 수, 가격, 관리 상태, 주변 동선 등"></textarea>'
+    + '<div class="row"><button type="button" class="lgbtn" id="lkSave">저장</button><span class="sub" id="lkSt"></span></div></div>';
+  el.querySelector("h2").textContent = l.n;
+  const dl = el.querySelector("dl"); const row = (a, b) => { if (!b) return; const t = document.createElement("dt"); t.textContent = a; const v = document.createElement("dd"); v.textContent = b; dl.append(t, v); };
+  row("업종", l.c); row("영업", l.h); row("도로명", l.r); row("지번", l.j); row("오픈업", l.ou);
+  const ln = el.querySelector(".links"); [["네이버 지도", nv], ["카카오맵", kakao]].forEach(([t, u]) => { const a = document.createElement("a"); a.href = u; a.target = "_blank"; a.rel = "noopener"; a.textContent = t; ln.appendChild(a); });
+  const io = el.querySelector("#lkOpen"), im = el.querySelector("#lkMemo"), st = el.querySelector("#lkSt");
+  io.value = x.open || ""; im.value = x.memo || "";
+  const stTxt = () => { const y = lkInfo(l); if (!y.t) return syOn() ? "" : "시트 미연결 — 이 기기에만 저장됨"; const d = new Date(+y.t); return "저장 " + (d.getMonth() + 1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0") + (y.who ? " · " + y.who : "") + (y.up ? "" : (syOn() ? " · 시트 전송 대기" : " · 이 기기에만 저장")); };
+  st.textContent = stTxt();
+  el.querySelector("#lkSave").onclick = () => {
+    store.lk[k] = { open: io.value.trim(), memo: im.value.trim(), t: Date.now(), who: (sy && sy.who) || "", up: 0 }; save();
+    st.textContent = stTxt(); try { if (lkIw && lkIwFor === LKM[LOCK.indexOf(l)]) lkIw.setContent(lkIwHtml(l)); } catch (e) {}
+    lkFlush().then(() => { if (selectedK != null && LOCK[selectedK] === l) st.textContent = stTxt(); });
+  };
+}
+async function lkFlush() {
+  if (lkBusy || !syOn()) return; lkBusy = true;
+  try {
+    for (const l of LOCK) {
+      const k = lkKey(l), x = store.lk[k]; if (!x || x.up) continue;
+      const ts = Number(x.t) || Date.now();
+      await syPost({ action: "set", key: k, name: l.n, addr: l.j, area: "짐보관", visited: 0, cls: x.open ? "오픈 " + x.open : "", notes: x.memo ? [{ id: k + "|m", w: x.who || "", t: x.memo, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" });
+      if ((Number(store.lk[k].t) || 0) === ts) store.lk[k].up = 1; save();
+    }
+  } catch (e) { sySt("보관소 메모 시트 저장 실패 (이 기기에는 저장됨, 다음 동기화 때 재시도)"); }
+  finally { lkBusy = false; }
+}
+function lkFromRows(rows) {
+  let ch = 0;
+  rows.forEach((w) => {
+    const k = String(w.key); if (!k.startsWith(LKK) || w.del) return;
+    const loc = store.lk[k]; if (loc && !loc.up) return;
+    const ts = Number(w.ts) || 0; if (loc && ts <= (Number(loc.t) || 0)) return;
+    const ns = (Array.isArray(w.notes) ? w.notes : []).filter((n) => n && !n.del);
+    store.lk[k] = { open: String(w.cls || "").replace(/^오픈\s*/, ""), memo: ns.map((n) => String(n.t || "")).join("\n"), t: ts, who: (ns[0] && ns[0].w) || "", up: 1 }; ch++;
+  });
+  if (ch) { save(); const a = document.activeElement; if (selectedK != null && !(a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && /^lk/.test(a.id))) renderDetail(); }
+  return ch;
+}
 function lkEsc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function initLockers() {
   if (!map || typeof naver === "undefined") return;
@@ -1013,8 +1072,9 @@ function initLockers() {
     const m = new naver.maps.Marker({ map: lkOn ? map : null, position: new naver.maps.LatLng(l.la, l.lo), zIndex: 8, title: l.n, icon: { content: '<div class="lkmk">보</div>', anchor: new naver.maps.Point(0, 0) } });
     naver.maps.Event.addListener(m, "click", () => {
       if (lkIw && lkIw.getMap() && lkIwFor === m) { lkIw.close(); lkIwFor = null; return; }
+      selectLocker(LOCK.indexOf(l));
       if (!lkIw) lkIw = new naver.maps.InfoWindow({ content: "", borderWidth: 1, borderColor: "#9aa5b1", anchorSize: new naver.maps.Size(8, 8), pixelOffset: new naver.maps.Point(0, -8) });
-      lkIw.setContent('<div class="lkiw"><b>' + lkEsc(l.n) + '</b><div>' + lkEsc(l.c) + (l.h ? " · " + lkEsc(l.h) : "") + (l.ou ? " · " + lkEsc(l.ou) : "") + '</div><div>' + lkEsc(l.r) + '</div><div class="sub">' + lkEsc(l.j) + "</div></div>");
+      lkIw.setContent(lkIwHtml(l));
       lkIw.open(map, m); lkIwFor = m;
     });
     return m;
@@ -1394,7 +1454,7 @@ function paintListings() {
   LMK.forEach((m, i) => { if (!m) return; try { m.setIcon({ content: '<div class="lmk' + (LIST[i] && LIST[i].field ? " fld" : "") + (selectedL === i ? " sel" : "") + '"><div class="d"></div></div>', anchor: new naver.maps.Point(0, 0) }); } catch (e) {} });
 }
 function selectListing(i) {
-  const prev = selected; selected = null; if (selectedL !== i) { lForm = null; lEdit = false; } selectedL = i; fsHidden = false;
+  const prev = selected; selected = null; selectedK = null; if (selectedL !== i) { lForm = null; lEdit = false; } selectedL = i; fsHidden = false;
   if (prev != null) setIcon(prev);
   renderDetail(); renderList(); paintListings(); try { fsInfo(); } catch (e) {}
   const l = LIST[i]; try { if (map && l.la) { map.setZoom(Math.max(map.getZoom(), 17)); map.panTo(new naver.maps.LatLng(l.la, l.lo)); } } catch (e) {}
@@ -1694,8 +1754,9 @@ async function syPull() {
     const j = await syPost({ action: "list" }); let ch = 0;
     { const nf = j.rows.filter((w) => String(w.key).startsWith(FLK) && !w.del).map(flFromRow).filter((f) => f.id && f.la); if (JSON.stringify(nf) !== JSON.stringify(FLSHEET)) { FLSHEET = nf; lMerge(); } }
     try { leaseMerge(); } catch (e) {}
+    try { lkFromRows(j.rows); } catch (e) {}
     j.rows.forEach((w) => {
-      if (String(w.key).startsWith(FLK)) return;
+      if (String(w.key).startsWith(FLK) || String(w.key).startsWith(LKK)) return;
       if (store.removed[w.key]) return;
       if (w.del) { if (store.removed[w.key]) return; const x = byKey(w.key); if (x && x.custom) { rmLocal(w.key); ch++; rmNeedReload = true; } return; }
       let d = byKey(w.key); if (!d && w.lat && w.lng && w.name) d = addCustom({ n: String(w.name), la: Number(w.lat), lo: Number(w.lng), j: String(w.key).slice(0, String(w.key).indexOf("|")), z: zOf(w.area, Number(w.lat), Number(w.lng)) }, false);
@@ -1719,7 +1780,7 @@ async function syPull() {
     return ch;
   } catch (e) { sySt("시트 불러오기 실패 (주소·비밀키·인터넷 확인)"); }
 }
-async function syAll() { if (!syOn()) { sySt("시트 미연결 (이 기기에만 저장)"); return; } sySt("동기화 중…"); await syPull(); await syFlush(); if (!Object.keys(syq).length && !/실패/.test($("#sySt").textContent)) sySt("시트 연결됨 · 동기화 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })); }
+async function syAll() { if (!syOn()) { sySt("시트 미연결 (이 기기에만 저장)"); return; } sySt("동기화 중…"); await syPull(); await syFlush(); try { await lkFlush(); } catch (e) {} if (!Object.keys(syq).length && !/실패/.test($("#sySt").textContent)) sySt("시트 연결됨 · 동기화 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })); }
 $("#syUrl").value = sy.url; $("#syTok").value = sy.token; $("#syWho").value = sy.who;
 document.querySelectorAll("#syWhoRow button").forEach((b) => { b.onclick = () => { setWho(b.dataset.w); renderDetail(); }; }); paintWho();
 $("#sySave").onclick = () => {
