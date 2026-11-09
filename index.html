@@ -274,7 +274,7 @@ body.fsb{overflow:hidden}
 </style></head><body>
 <div class="wrap">
   <header>
-    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 145</small></h1>
+    <h1>임장 지도 <small id="ver" style="font-size:11px;font-weight:400;color:var(--muted);margin-left:4px">v26.11.09 · 146</small></h1>
     <div class="sub">
       <span>사진매장 <b id="cTotal">0</b>곳</span>
       <span>오픈업 매출 확인 <b id="cOu">0</b>곳</span>
@@ -1734,10 +1734,17 @@ async function syFlush() {
   if (!syOn() || syBusy) return; syBusy = true;
   try {
     const order = (k) => { const d = byKey(k); return (store.removed[k] ? 0 : d && d.custom ? 0 : 1); };
+    // 이 기기에 위치 조정 기록이 없는 매장을 올릴 때, 다른 기기가 시트에 올린 위치를 빈칸으로 덮어쓰지 않도록 시트 위치를 먼저 받아 둔다
+    let RP = null;
+    if (Object.keys(syq).some((k) => { const d = byKey(k); return d && !d.custom && !store.pos[k] && !store.removed[k]; })) {
+      try { const jl = await syPost({ action: "list" }); RP = {}; (jl.rows || []).forEach((w) => { const a = Number(w.lat), b = Number(w.lng); if (!w.del && w.lat && w.lng && isFinite(a) && isFinite(b)) RP[w.key] = [a, b]; }); }
+      catch (e) { throw e; }
+    }
     for (const k of Object.keys(syq).sort((x, y) => order(x) - order(y) || (store.ts[y] || 0) - (store.ts[x] || 0))) {
       const rm = store.removed[k];
       if (rm) { await syPost({ action: "set", key: k, name: rm.n, addr: rm.j, area: rm.a || "", del: 1, ts: rm.ts }); delete syq[k]; syQSave(); continue; }
       const d = byKey(k); if (!d) { delete syq[k]; continue; }
+      if (!d.custom && !store.pos[k] && RP && RP[k]) { store.pos[k] = RP[k]; d.la = RP[k][0]; d.lo = RP[k][1]; d.mla = d.la; d.mlo = d.lo; save(); try { markers[d.id] && markers[d.id].setPosition(new naver.maps.LatLng(d.la, d.lo)); } catch (e) {} }
       const ts = store.ts[k] || Date.now();
       await syPost({ action: "set", key: k, name: d.n, addr: d.j, area: AREAL[d.z], visited: d.vis ? 1 : 0, vt: (store.vt || {})[k] || "", dev: isPhone() ? "폰" : "PC", cls: CLSK[d.cls] || "", notes: store.notes[k] || [], booth: store.booth[k] || "", lat: (d.custom || store.pos[k]) ? d.la : "", lng: (d.custom || store.pos[k]) ? d.lo : "", ts });
       if ((store.ts[k] || 0) === ts) delete syq[k]; syQSave();
