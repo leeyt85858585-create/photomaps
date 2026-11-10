@@ -1,0 +1,395 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>대학로 사물함 지도</title>
+<style>
+:root{--bg:#f1f4f6;--surface:#fff;--ink:#16212b;--muted:#566573;--line:#d3dae0;--accent:#0d6a8a;--th:#6d4bb3;--lk:#c2410c;--hid:#64748b;--ls:#f59e0b;--font:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#12181d;--surface:#1a232a;--ink:#e5ecf1;--muted:#9aa9b5;--line:#2c3841;--accent:#62b9d8;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0;height:100%}body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font);overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+#map{position:fixed!important;top:0;left:0;width:100vw;height:100vh;height:100dvh}
+.top{position:absolute;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));display:flex;gap:6px;align-items:center;z-index:20;pointer-events:none}
+.top>*{pointer-events:auto}
+.ttl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:700;font-size:14px;white-space:nowrap}
+.ttl small{font-weight:400;color:var(--muted);font-size:11px;margin-left:4px}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:5px 10px;box-shadow:0 1px 4px rgba(0,0,0,.12);cursor:pointer;font-size:13px;white-space:nowrap}
+.btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sp{flex:1}
+#syB{font-size:11px;color:var(--muted)}
+.panel{position:absolute;z-index:25;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.18);overflow:auto}
+#lg{right:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:250px;max-height:70vh;padding:10px 12px;display:none}
+#lg.open{display:block}
+#lg label{display:flex;gap:8px;align-items:center;padding:3px 0;cursor:pointer}
+#lg .sw{width:14px;height:14px;display:inline-block;flex:none}
+#lg h4{margin:8px 0 2px;font-size:12px;color:var(--muted);font-weight:500}
+#ls{left:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:330px;max-height:62vh;display:none}
+#ls.open{display:block}
+#ls table{border-collapse:collapse;width:100%;font-size:12.5px}
+#ls th,#ls td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+#ls th{position:sticky;top:0;background:var(--surface);font-weight:500;color:var(--muted)}
+#ls tr[data-i]{cursor:pointer}#ls tr[data-i]:hover{background:rgba(13,106,138,.08)}
+#ls .tabs{display:flex;gap:4px;padding:8px 8px 4px;position:sticky;top:0;background:var(--surface);z-index:1}
+#ls .tabs button{border:1px solid var(--line);background:none;border-radius:8px;padding:2px 8px;font-size:12px;cursor:pointer}
+#ls .tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#dt{left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));max-height:55vh;padding:12px 14px 14px;display:none}
+#dt.open{display:block}
+@media (min-width:900px){#dt{left:auto;width:400px;right:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);bottom:auto;max-height:calc(100vh - 70px)}#lg{right:416px}}
+#dt h2{margin:0 26px 4px 0;font-size:17px}
+#dt .x{position:absolute;right:8px;top:6px;border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+#dt dl{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;margin:8px 0;font-size:13px}
+#dt dt{color:var(--muted)}#dt dd{margin:0}
+.bdg{display:inline-block;font-size:11px;border-radius:999px;padding:1px 8px;margin:0 4px 2px 0;border:1px solid var(--line)}
+.bdg.th{background:var(--th);color:#fff;border-color:var(--th)}.bdg.lk{background:var(--lk);color:#fff;border-color:var(--lk)}.bdg.hid{background:var(--hid);color:#fff;border-color:var(--hid)}.bdg.ls{background:var(--ls);color:#1b1300;border-color:var(--ls)}
+.sec{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.sec h3{margin:0 0 4px;font-size:13px}
+.muted{color:var(--muted);font-size:12px}
+.links a{margin-right:10px;font-size:13px;color:var(--accent)}
+.f label{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+.f input,.f textarea,.f select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.f .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.pb{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:6px 14px;cursor:pointer}
+.gb{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+.db{background:none;border:1px solid #b91c1c;color:#b91c1c;border-radius:8px;padding:6px 12px;cursor:pointer}
+.db.arm{background:#b91c1c;color:#fff}
+#hint{position:absolute;left:50%;transform:translateX(-50%);top:calc(max(8px,env(safe-area-inset-top)) + 44px);z-index:30;background:#16212b;color:#fff;border-radius:10px;padding:6px 12px;font-size:13px;display:none;white-space:nowrap}
+#hint button{margin-left:8px;background:#fff;color:#16212b;border:0;border-radius:6px;padding:1px 8px;cursor:pointer}
+/* markers */
+.mk{position:relative;width:0;height:0}
+.th-m{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:var(--th);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);font-size:11px}
+.th-m.dim{background:#a99bc9}
+.th-l{position:absolute;left:12px;top:-8px;font-size:11px;white-space:nowrap;color:#3b2a66;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;font-weight:500}
+.lk-m{position:absolute;width:18px;height:18px;transform:translate(-50%,-50%);border-radius:4px;background:var(--lk);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+.lk-m.hid{background:var(--hid)}
+.ls-m{position:absolute;left:-7px;top:-7px;width:14px;height:14px;transform:rotate(45deg);background:var(--ls);border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
+.ex-m{position:absolute;transform:translate(-50%,-50%);background:#0f766e;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;border:1px solid #fff;white-space:nowrap}
+.sel .th-m,.sel .lk-m{box-shadow:0 0 0 3px #facc15}.sel .ls-m{background:#1b1300;border-color:#fbbf24}
+</style></head><body>
+<div id="map"></div>
+<div class="top">
+  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 1</small></div>
+  <button class="btn" id="lsBtn">목록</button>
+  <div class="sp"></div>
+  <span class="btn" id="syB">시트 확인 중</span>
+  <button class="btn" id="addBtn">+ 매물</button>
+  <button class="btn" id="lgBtn">범례</button>
+</div>
+<div id="hint"><span id="hintT"></span><button id="hintX">취소</button></div>
+<div class="panel" id="lg">
+  <h4>레이어 (켜기/끄기)</h4>
+  <label><input type="checkbox" data-ly="th" checked><span class="sw" style="background:var(--th);border-radius:50%"></span>공연장 (숫자 = 종합 순위)</label>
+  <label><input type="checkbox" data-ly="lk" checked><span class="sw" style="background:var(--lk);border-radius:3px"></span>경쟁 사물함</label>
+  <label><input type="checkbox" data-ly="hid" checked><span class="sw" style="background:var(--hid);border-radius:3px"></span>숨은 보관소 (겸업·극장 내)</label>
+  <label><input type="checkbox" data-ly="ls" checked><span class="sw" style="background:var(--ls);transform:rotate(45deg) scale(.8);border-radius:2px"></span>부동산 매물</label>
+  <label><input type="checkbox" data-ly="ex" checked><span class="sw" style="background:#0f766e;border-radius:3px"></span>혜화역 출구</label>
+  <label><input type="checkbox" data-ly="ring"><span class="sw" style="border:2px solid #0f766e;border-radius:50%"></span>출구 도보 3분·5분 원</label>
+  <label><input type="checkbox" data-ly="gap" checked><span class="sw" style="border:2px dashed #dc2626;border-radius:50%"></span>빈자리 공연장 (반경 안에 경쟁 사물함 없음)</label>
+  <div style="display:flex;gap:6px;align-items:center;padding-left:22px;font-size:12px">반경 <select id="gapR" style="padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option>30</option><option selected>50</option><option>100</option><option>150</option></select> m</div>
+  <h4>순위 기준</h4>
+  <select id="rkSel" style="width:100%;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--bg)"></select>
+  <p class="muted" id="rkNote"></p>
+  <h4>시트 연결</h4>
+  <p class="muted" id="syInfo"></p>
+  <input id="syLink" placeholder="초대 링크 붙여넣기 (기존 임장지도와 같은 링크)" style="width:100%;padding:5px;border:1px solid var(--line);border-radius:8px;background:var(--bg)">
+</div>
+<div class="panel" id="ls"></div>
+<div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
+<script src="data.js?v=1"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const isPhone = () => { try { return !!((navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)); } catch (e) { return false; } };
+const LS = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } };
+const won = (n) => (n == null || n === "" || !isFinite(+n)) ? "미확인" : (+n).toLocaleString("ko-KR") + "만";
+const eok = (n) => { if (n == null || n === "" || !isFinite(+n)) return "미확인"; n = +n; if (n === 0) return "없음"; const e = Math.floor(n), m = Math.round((n - e) * 10000); return (e ? e + "억" : "") + (m ? (e ? " " : "") + m.toLocaleString("ko-KR") + "만" : ""); };
+function dist(a, b, c, d) { const R = 6371000, r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r; return Math.round(Math.sqrt(x * x + y * y) * R); }
+const walk = (m) => Math.max(1, Math.round(m / 75)) + "분";
+
+/* ---------- 시트 동기화: 기존 임장지도와 같은 저장값(같은 주소 아래라 자동 공유) ---------- */
+const SYK = "hongdae-imjang-sync-v1";
+let sy = Object.assign({ url: "", token: "", who: "" }, LS(SYK) || {});
+const syOn = () => !!(sy.url && sy.token);
+const enc = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
+(function applyInvite() {
+  let code = ""; try { code = new URLSearchParams(location.search).get("sync") || ""; } catch (e) {}
+  const m = code ? [null, code] : /^#sync=(.+)$/.exec(location.hash || ""); if (!m) return;
+  try { const o = dec(decodeURIComponent(m[1])); if (o && o.u && o.t) { sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : sy.who || "" }; LS(SYK, sy); } } catch (e) {}
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+})();
+function syBadge(t) { $("#syB").textContent = t; $("#syInfo").textContent = syOn() ? "연결됨" + (sy.who ? " · " + sy.who : "") + " — 기존 임장지도와 같은 시트에 저장됩니다." : "미연결 — 이 기기에만 저장됩니다. 기존 임장지도 초대 링크를 붙여넣으면 연결됩니다."; }
+$("#syLink").addEventListener("input", () => {
+  const v = $("#syLink").value; const m = /[#?&]sync=([A-Za-z0-9+\/=_%-]+)/.exec(v); if (!m) return;
+  try { const o = dec(decodeURIComponent(m[1])); if (o && o.u && o.t) { sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : sy.who || "" }; LS(SYK, sy); $("#syLink").value = ""; syAll(); } } catch (e) { syBadge("초대 링크를 읽지 못했습니다"); }
+});
+async function syPost(p) {
+  const r = await fetch(sy.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(Object.assign({ token: sy.token, who: sy.who }, p)) });
+  const j = await r.json(); if (!j.ok) throw new Error(j.err || "fail"); return j;
+}
+
+/* 로컬 저장 */
+const ST = Object.assign({ lk: {}, ls: {} }, LS("lockermap_store") || {});
+const save = () => LS("lockermap_store", ST);
+
+/* 사물함 메모·오픈시기·위치: 기존 임장지도와 같은 키(보관|이름|좌표) → 어느 지도에서 입력해도 양쪽에 보임 */
+const LKK = "보관|";
+const lkKey = (l) => LKK + (l.kn || l.n) + "|" + (+l.la).toFixed(6) + "," + (+l.lo).toFixed(6);
+/* 사물함지도 전용 매물: '보관매물|' 키, 위도·경도 칸은 비우고 권역 칸에 '@위도,경도'(기존 지도가 사진매장으로 오인하지 않도록) */
+const LSK = "보관매물|";
+
+let pulling = false, flushing = false;
+async function syPull() {
+  if (!syOn() || pulling) return; pulling = true;
+  try {
+    const j = await syPost({ action: "list" }); let ch = 0;
+    (j.rows || []).forEach((w) => {
+      const k = String(w.key);
+      const pm = /@\s*([\d.]+)\s*,\s*([\d.]+)/.exec(String(w.area || "")), pos = pm ? [+pm[1], +pm[2]] : undefined;
+      const ts = Number(w.ts) || 0;
+      if (k.startsWith(LKK)) {
+        if (w.del) return; const loc = ST.lk[k]; if (loc && !loc.up) return; if (loc && ts <= (Number(loc.t) || 0)) return;
+        const ns = (Array.isArray(w.notes) ? w.notes : []).filter((n) => n && !n.del);
+        ST.lk[k] = { open: String(w.cls || "").replace(/^오픈\s*/, ""), memo: ns.map((n) => String(n.t || "")).join("\n"), t: ts, who: (ns[0] && ns[0].w) || "", up: 1 }; if (pos) ST.lk[k].pos = pos; ch++;
+      } else if (k.startsWith(LSK)) {
+        const loc = ST.ls[k]; if (loc && !loc.up) return; if (loc && ts <= (Number(loc.t) || 0)) return;
+        if (w.del) { if (loc) { delete ST.ls[k]; ch++; } return; }
+        let f = {}; try { f = JSON.parse(String(w.cls || "{}")); } catch (e) {}
+        const ns = (Array.isArray(w.notes) ? w.notes : []).filter((n) => n && !n.del);
+        if (!pos) return;
+        ST.ls[k] = Object.assign({ name: String(w.name || "매물"), addr: String(w.addr || ""), la: pos[0], lo: pos[1], memo: ns.map((n) => String(n.t || "")).join("\n"), t: ts, who: (ns[0] && ns[0].w) || "", up: 1 }, f); ch++;
+      }
+    });
+    if (ch) { save(); drawLockers(); drawListings(); if (sel && !isEditing()) renderDetail(); }
+    syBadge("시트 연결됨");
+  } catch (e) { syBadge("시트 불러오기 실패"); }
+  finally { pulling = false; }
+}
+async function syFlush() {
+  if (!syOn() || flushing) return; flushing = true;
+  try {
+    for (const l of LOCK) {
+      const k = lkKey(l), x = ST.lk[k]; if (!x || x.up) continue; const ts = Number(x.t) || Date.now();
+      await syPost({ action: "set", key: k, name: l.n, addr: l.j, area: "짐보관" + (Array.isArray(x.pos) ? " @" + (+x.pos[0]).toFixed(7) + "," + (+x.pos[1]).toFixed(7) : ""), visited: 0, cls: x.open ? "오픈 " + x.open : "", notes: x.memo ? [{ id: k + "|m", w: x.who || "", t: x.memo, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" });
+      if ((Number(ST.lk[k].t) || 0) === ts) ST.lk[k].up = 1; save();
+    }
+    for (const k of Object.keys(ST.ls)) {
+      const x = ST.ls[k]; if (x.up) continue; const ts = Number(x.t) || Date.now();
+      if (x.del) { await syPost({ action: "set", key: k, name: x.name || "", addr: x.addr || "", area: "보관매물", del: 1, ts }); delete ST.ls[k]; save(); continue; }
+      const f = {}; LSF.forEach((n) => { if (x[n] !== undefined && x[n] !== "") f[n] = x[n]; });
+      await syPost({ action: "set", key: k, name: x.name || "매물", addr: x.addr || "", area: "보관매물 @" + (+x.la).toFixed(7) + "," + (+x.lo).toFixed(7), visited: 0, cls: JSON.stringify(f), notes: x.memo ? [{ id: k + "|m", w: x.who || "", t: x.memo, c: ts, ts, del: 0 }] : [], booth: "", lat: "", lng: "", ts, dev: isPhone() ? "폰" : "PC" });
+      if (ST.ls[k] && (Number(ST.ls[k].t) || 0) === ts) ST.ls[k].up = 1; save();
+    }
+    syBadge("시트 저장 완료 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
+  } catch (e) { syBadge("시트 저장 실패 · 다음에 자동 재시도"); }
+  finally { flushing = false; }
+}
+async function syAll() { if (!syOn()) { syBadge("시트 미연결"); return; } syBadge("동기화 중…"); await syPull(); await syFlush(); }  // 항상 받기 먼저, 올리기 나중
+const LSF = ["floor", "area", "dep", "rent", "prem", "mng", "elec", "sign", "use", "src", "date", "sc"];
+
+/* ---------- 지도 ---------- */
+let map = null, sel = null, layerOn = Object.assign({ th: true, lk: true, hid: true, ls: true, ex: true, ring: false, gap: true }, LS("lockermap_layers") || {});
+const MK = { th: [], lk: [], hid: [], ls: [], ex: [], ring: [], gap: [] };
+let RK = (LS("lockermap_rank") || "total");
+let GAPR = +(LS("lockermap_gapr") || 50);
+
+function rankOf(t) { return (t.rk && t.rk[RK]) || null; }
+function sortedTheaters() { return THEATERS.slice().sort((a, b) => (rankOf(a) || 999) - (rankOf(b) || 999) || a.n.localeCompare(b.n, "ko")); }
+
+function clear(ly) { MK[ly].forEach((m) => m.setMap(null)); MK[ly] = []; }
+function mk(pos, html, z, onclick, ly) {
+  const m = new naver.maps.Marker({ map: layerOn[ly] ? map : null, position: new naver.maps.LatLng(pos[0], pos[1]), zIndex: z, icon: { content: html, anchor: new naver.maps.Point(0, 0) } });
+  if (onclick) naver.maps.Event.addListener(m, "click", (e) => { onclick(); });
+  MK[ly].push(m); return m;
+}
+const isSel = (t, i) => sel && sel.t === t && sel.i === i;
+
+function drawTheaters() {
+  clear("th"); clear("gap");
+  THEATERS.forEach((t, i) => {
+    if (!isFinite(t.la)) return;
+    const r = rankOf(t), sz = r ? (r <= 3 ? 30 : r <= 10 ? 24 : 18) : 16;
+    mk([t.la, t.lo], '<div class="mk' + (isSel("th", i) ? " sel" : "") + '"><div class="th-m' + (r && r <= 10 ? "" : " dim") + '" style="width:' + sz + 'px;height:' + sz + 'px">' + (r || "·") + '</div>' + (r && r <= 10 ? '<div class="th-l">' + esc(t.short || t.n) + '</div>' : "") + '</div>', r && r <= 10 ? 30 - r : 5, () => select("th", i), "th");
+  });
+  // 사물함 공백: 상위 10 공연장 중 150m 안에 경쟁 사물함·숨은 보관소가 없는 곳
+  sortedTheaters().filter((t) => rankOf(t) && rankOf(t) <= 10 && isFinite(t.la)).forEach((t) => {
+    const near = LOCK.some((l) => { if (l.hid) return false; const p = lkPos(l); return dist(t.la, t.lo, p[0], p[1]) <= GAPR; });
+    if (near) return;
+    const c = new naver.maps.Circle({ map: layerOn.gap ? map : null, center: new naver.maps.LatLng(t.la, t.lo), radius: GAPR, strokeColor: "#dc2626", strokeOpacity: .9, strokeWeight: 2, strokeStyle: "dash", fillColor: "#dc2626", fillOpacity: .06, clickable: false });
+    MK.gap.push(c);
+  });
+}
+function lkInfo(l) { return ST.lk[lkKey(l)] || {}; }
+function lkPos(l) { const p = lkInfo(l).pos; return (Array.isArray(p) && isFinite(p[0])) ? p : [l.la, l.lo]; }
+function drawLockers() {
+  clear("lk"); clear("hid"); const seen = {};
+  LOCK.forEach((l, i) => {
+    const p = lkPos(l), pk = p[0].toFixed(5) + "," + p[1].toFixed(5), dup = seen[pk] = (seen[pk] || 0) + 1;   // 같은 건물은 옆으로 비켜 그림
+    const ly = l.hid ? "hid" : "lk";
+    mk(p, '<div class="mk' + (isSel("lk", i) ? " sel" : "") + '" style="left:' + ((dup - 1) * 20) + 'px"><div class="lk-m' + (l.hid ? " hid" : "") + '">' + (l.hid ? "숨" : "보") + '</div></div>', 20, () => select("lk", i), ly);
+  });
+  try { drawTheaters(); } catch (e) {}
+}
+function drawListings() {
+  clear("ls");
+  Object.keys(ST.ls).forEach((k) => { const x = ST.ls[k]; if (x.del || !isFinite(x.la)) return; mk([x.la, x.lo], '<div class="mk' + (sel && sel.t === "ls" && sel.i === k ? " sel" : "") + '"><div class="ls-m"></div></div>', 25, () => select("ls", k), "ls"); });
+  LISTINGS.forEach((x, i) => { mk([x.la, x.lo], '<div class="mk' + (isSel("lsd", i) ? " sel" : "") + '"><div class="ls-m"></div></div>', 25, () => select("lsd", i), "ls"); });
+}
+function drawExits() {
+  clear("ex"); clear("ring");
+  EXITS.forEach((e) => {
+    if (!isFinite(e.la)) return;
+    mk([e.la, e.lo], '<div class="mk"><div class="ex-m">' + e.no + '</div></div>', 15, null, "ex");
+    [[240, .9], [400, .5]].forEach(([r, o]) => MK.ring.push(new naver.maps.Circle({ map: layerOn.ring ? map : null, center: new naver.maps.LatLng(e.la, e.lo), radius: r, strokeColor: "#0f766e", strokeOpacity: o, strokeWeight: 1.5, fillOpacity: 0, clickable: false })));
+  });
+}
+function drawAll() { drawLockers(); drawListings(); drawExits(); }
+
+/* ---------- 상세 ---------- */
+const isEditing = () => { const a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.closest("#dt")); };
+function select(t, i) {
+  if (sel && sel.t === t && sel.i === i) { closeDetail(); return; }   // 같은 표시 다시 누르면 닫힘
+  sel = { t, i }; renderDetail(); drawAll();
+}
+function closeDetail() { sel = null; $("#dt").classList.remove("open"); drawAll(); }
+$("#dtX").onclick = closeDetail;
+function nearest(la, lo) {
+  const ex = EXITS.filter((e) => isFinite(e.la)).map((e) => ({ e, d: dist(la, lo, e.la, e.lo) })).sort((a, b) => a.d - b.d)[0];
+  const lk = LOCK.filter((l) => !l.hid).map((l) => { const p = lkPos(l); return { l, d: dist(la, lo, p[0], p[1]) }; }).sort((a, b) => a.d - b.d);
+  const th = sortedTheaters().filter((t) => rankOf(t) && rankOf(t) <= 10 && isFinite(t.la)).map((t) => ({ t, d: dist(la, lo, t.la, t.lo) })).sort((a, b) => a.d - b.d);
+  return { ex, lk, th };
+}
+function nearHtml(la, lo, selfLock, selfTh) {
+  const n = nearest(la, lo); let h = '<div class="sec"><h3>주변 거리 (직선, 도보 75m/분 환산)</h3><dl>';
+  if (n.ex) h += "<dt>가까운 출구</dt><dd>" + esc(n.ex.e.no) + " · " + n.ex.d + "m (" + walk(n.ex.d) + ")</dd>";
+  const lks = n.lk.filter((x) => x.l !== selfLock);
+  if (lks[0]) h += "<dt>가까운 경쟁</dt><dd>" + esc(lks[0].l.n) + " · " + lks[0].d + "m</dd>";
+  h += "<dt>50m 내 경쟁</dt><dd>" + lks.filter((x) => x.d <= 50).length + "곳</dd><dt>150m 내 경쟁</dt><dd>" + lks.filter((x) => x.d <= 150).length + "곳</dd>";
+  h += "<dt>상위10 공연장</dt><dd>" + (n.th.filter((x) => x.t !== selfTh).length ? n.th.filter((x) => x.t !== selfTh).slice(0, 4).map((x) => rankOf(x.t) + "위 " + esc(x.t.short || x.t.n) + " " + x.d + "m").join("<br>") : "순위 미확정") + "</dd>";
+  h += "<dt>300m 내 상위10</dt><dd>" + n.th.filter((x) => x.t !== selfTh && x.d <= 300).length + "곳</dd></dl></div>";
+  return h;
+}
+function links(name, la, lo) { return '<div class="links"><a target="_blank" rel="noopener" href="https://map.naver.com/p/search/' + encodeURIComponent(name) + '">네이버 지도</a><a target="_blank" rel="noopener" href="https://map.kakao.com/link/map/' + encodeURIComponent(name) + "," + la + "," + lo + '">카카오맵</a></div>'; }
+function row(a, b) { return (b === undefined || b === null || b === "") ? "" : "<dt>" + esc(a) + "</dt><dd>" + b + "</dd>"; }
+function renderDetail() {
+  if (!sel) return; const B = $("#dtB"); let h = "";
+  if (sel.t === "th") {
+    const t = THEATERS[sel.i]; const r = t.rk || {};
+    h += "<h2>" + esc(t.n) + "</h2><span class='bdg th'>공연장</span>" + (rankOf(t) ? "<span class='bdg'>" + esc(RKN[RK]) + " " + rankOf(t) + "위</span>" : "");
+    h += "<dl>" + row("좌석", t.seats ? esc(t.seats) : "미확인") + row("주소", esc(t.a || "")) + row("최근 흥행작", esc(t.hits || "")) + row("메모", esc(t.note || "")) + "</dl>";
+    h += '<div class="sec"><h3>항목별 순위</h3><dl>' + Object.keys(RKN).map((k) => row(RKN[k], r[k] ? r[k] + "위" + (t.val && t.val[k] != null ? " <span class='muted'>(" + esc(t.val[k]) + ")</span>" : "") : "<span class='muted'>순위 밖·미확인</span>")).join("") + "</dl></div>";
+    h += nearHtml(t.la, t.lo, null, t) + links(t.n, t.la, t.lo);
+  } else if (sel.t === "lk") {
+    const l = LOCK[sel.i], x = lkInfo(l), p = lkPos(l);
+    h += "<h2>" + esc(l.n) + "</h2><span class='bdg " + (l.hid ? "hid'>숨은 보관소" : "lk'>경쟁 사물함") + "</span>";
+    h += "<dl>" + row("영업", esc(l.h || "미확인")) + row("층", esc(l.fl || "미확인")) + row("가격", esc(l.price || "미확인")) + row("특징", esc(l.feat || "")) + row("평판", esc(l.rep || "")) + row("주소", esc(l.r || "") + (l.j ? "<br><span class='muted'>" + esc(l.j) + "</span>" : "")) + "</dl>";
+    h += '<div class="sec f"><h3>현장 기록 <span class="muted">(기존 임장지도와 공유)</span></h3><label>오픈 시기</label><input id="lkOpen" value="' + esc(x.open || "") + '" placeholder="예: 2025.03"><label>메모</label><textarea id="lkMemo" rows="3" placeholder="칸 수, 공실, 청결, 동선 등">' + esc(x.memo || "") + '</textarea><div class="row"><button class="pb" id="lkSave">저장</button><button class="gb" id="lkAdj">📍 위치 조정</button><span class="muted" id="lkSt">' + (x.t ? "저장 " + new Date(+x.t).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) + (x.who ? " · " + esc(x.who) : "") : "") + "</span></div></div>";
+    h += nearHtml(p[0], p[1], l) + links(l.n, p[0], p[1]);
+  } else if (sel.t === "ls" || sel.t === "lsd") {
+    const fixed = sel.t === "lsd", x = fixed ? LISTINGS[sel.i] : ST.ls[sel.i]; if (!x) { closeDetail(); return; }
+    h += "<h2>" + esc(x.name || "매물") + "</h2><span class='bdg ls'>부동산 매물</span>" + (x.prem === 0 || x.prem === "0" ? "" : x.prem ? "<span class='bdg'>부동산 확인</span>" : "");
+    h += "<dl>" + row("보증금", won(x.dep)) + row("월세", won(x.rent)) + row("권리금", eok(x.prem)) + row("관리비", x.mng !== undefined && x.mng !== "" ? won(x.mng) : "") + row("층", esc(x.floor || "미확인")) + row("면적", x.area ? esc(x.area) + "평" : "미확인") + row("전기", esc(x.elec || "")) + row("간판", esc(x.sign || "")) + row("용도(대장)", esc(x.use || "미확인")) + row("출처", esc(x.src || "")) + row("확인일", esc(x.date || "")) + row("매물 점수", x.sc ? esc(x.sc) : "") + row("주소", esc(x.addr || "")) + row("메모", esc(x.memo || "").replace(/\n/g, "<br>")) + "</dl>";
+    if (!fixed) h += '<div class="row"><button class="pb" id="lsEdit">수정</button><button class="gb" id="lsMove">📍 위치 조정</button><button class="db" id="lsDel">삭제</button></div>';
+    h += nearHtml(x.la, x.lo) + links(x.addr || x.name, x.la, x.lo);
+  }
+  B.innerHTML = h; $("#dt").classList.add("open"); $("#dt").scrollTop = 0;
+  if (sel.t === "lk") {
+    const l = LOCK[sel.i], k = lkKey(l);
+    $("#lkSave").onclick = () => { ST.lk[k] = Object.assign({}, ST.lk[k] || {}, { open: $("#lkOpen").value.trim(), memo: $("#lkMemo").value.trim(), t: Date.now(), who: sy.who || "", up: 0 }); save(); $("#lkSt").textContent = syOn() ? "저장 중…" : "이 기기에만 저장됨(시트 미연결)"; syFlush().then(() => { if (sel && sel.t === "lk") renderDetail(); }); };
+    $("#lkAdj").onclick = () => startPick("사물함 실제 위치를 지도에서 누르세요", (la, lo) => { ST.lk[k] = Object.assign({}, ST.lk[k] || {}, { pos: [la, lo], t: Date.now(), who: sy.who || "", up: 0 }); save(); drawAll(); renderDetail(); syFlush(); });
+  }
+  if (sel.t === "ls") {
+    const k = sel.i;
+    $("#lsEdit").onclick = () => openForm(k);
+    $("#lsMove").onclick = () => startPick("매물 위치를 지도에서 다시 누르세요", (la, lo) => { Object.assign(ST.ls[k], { la, lo, t: Date.now(), up: 0 }); save(); drawAll(); renderDetail(); syFlush(); });
+    const d = $("#lsDel"); d.onclick = () => {   // 2단계 확인
+      if (!d.classList.contains("arm")) { d.classList.add("arm"); d.textContent = "한 번 더 누르면 삭제"; setTimeout(() => { try { d.classList.remove("arm"); d.textContent = "삭제"; } catch (e) {} }, 4000); return; }
+      Object.assign(ST.ls[k], { del: 1, t: Date.now(), up: 0 }); save(); closeDetail(); syFlush();
+    };
+  }
+}
+
+/* ---------- 지도에서 위치 고르기 (위치 먼저 → 입력칸 나중) ---------- */
+let pickCb = null;
+function startPick(msg, cb) { pickCb = cb; $("#hintT").textContent = msg; $("#hint").style.display = "block"; $("#dt").classList.remove("open"); }
+function endPick() { pickCb = null; $("#hint").style.display = "none"; }
+$("#hintX").onclick = () => { endPick(); if (sel) renderDetail(); };
+
+$("#addBtn").onclick = () => startPick("매물 위치를 지도에서 누르세요", (la, lo) => {
+  const k = LSK + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  ST.ls[k] = { name: "", la, lo, t: Date.now(), who: sy.who || "", up: 0, _new: 1 };
+  sel = { t: "ls", i: k }; drawAll(); openForm(k);
+});
+function revGeo(la, lo) { return new Promise((res) => { try { naver.maps.Service.reverseGeocode({ coords: new naver.maps.LatLng(la, lo), orders: "roadaddr,addr" }, (st, r) => { try { const a = r.v2.address; res(a.roadAddress || a.jibunAddress || ""); } catch (e) { res(""); } }); } catch (e) { res(""); } }); }
+function openForm(k) {
+  const x = ST.ls[k]; const v = (n) => esc(x[n] == null ? "" : x[n]);
+  $("#dtB").innerHTML = "<h2>" + (x._new ? "매물 추가" : "매물 수정") + "</h2><div class='f'>"
+    + "<label>매물명</label><input id='fN' value='" + v("name") + "' placeholder='예: 동숭길 OO빌딩 1층'>"
+    + "<label>주소</label><input id='fA' value='" + v("addr") + "' placeholder='자동 입력 중…'>"
+    + "<div class='two'><div><label>층</label><input id='fFl' value='" + v("floor") + "' placeholder='1층'></div><div><label>면적(평)</label><input id='fAr' inputmode='decimal' value='" + v("area") + "'></div></div>"
+    + "<div class='two'><div><label>보증금(만원)</label><input id='fDep' inputmode='numeric' value='" + v("dep") + "'></div><div><label>월세(만원)</label><input id='fRent' inputmode='numeric' value='" + v("rent") + "'></div></div>"
+    + "<div class='two'><div><label>권리금(억, 예 0.3)</label><input id='fPrem' inputmode='decimal' value='" + v("prem") + "' placeholder='없음은 0'></div><div><label>관리비(만원)</label><input id='fMng' inputmode='numeric' value='" + v("mng") + "'></div></div>"
+    + "<div class='two'><div><label>전기</label><input id='fEl' value='" + v("elec") + "'></div><div><label>간판</label><input id='fSg' value='" + v("sign") + "'></div></div>"
+    + "<div class='two'><div><label>건축물대장 용도</label><input id='fUse' value='" + v("use") + "' placeholder='예: 제2종근린생활시설'></div><div><label>출처</label><input id='fSrc' value='" + v("src") + "' placeholder='네이버부동산·OO부동산'></div></div>"
+    + "<label>메모</label><textarea id='fM' rows='3'>" + esc(x.memo || "") + "</textarea>"
+    + "<div class='row'><button class='pb' id='fOk'>저장</button><button class='gb' id='fNo'>취소</button><span class='muted'>모르는 칸은 비워두면 '미확인'</span></div></div>";
+  $("#dt").classList.add("open");
+  if (!x.addr) revGeo(x.la, x.lo).then((a) => { const el = $("#fA"); if (el && !el.value) el.value = a; });
+  const num = (s) => { s = String(s).replace(/[,\s]/g, ""); return s === "" ? "" : isFinite(+s) ? +s : ""; };
+  ["#fDep", "#fRent", "#fMng"].forEach((id) => { const el = $(id); el.addEventListener("input", () => { const n = num(el.value); if (n !== "") el.value = n.toLocaleString("ko-KR"); }); if (el.value) el.value = (+el.value).toLocaleString("ko-KR"); });
+  $("#fOk").onclick = () => {
+    Object.assign(x, { name: $("#fN").value.trim() || "매물", addr: $("#fA").value.trim(), floor: $("#fFl").value.trim(), area: num($("#fAr").value), dep: num($("#fDep").value), rent: num($("#fRent").value), prem: num($("#fPrem").value), mng: num($("#fMng").value), elec: $("#fEl").value.trim(), sign: $("#fSg").value.trim(), use: $("#fUse").value.trim(), src: $("#fSrc").value.trim(), memo: $("#fM").value.trim(), date: x.date || new Date().toISOString().slice(0, 10), t: Date.now(), who: x.who || sy.who || "", up: 0 });
+    delete x._new; save(); drawAll(); renderDetail(); syFlush();
+  };
+  $("#fNo").onclick = () => { if (x._new) { delete ST.ls[k]; save(); closeDetail(); } else renderDetail(); };
+}
+
+/* ---------- 목록 ---------- */
+let lsTab = "th";
+function renderList() {
+  const P = $("#ls"); let h = '<div class="tabs"><button data-t="th"' + (lsTab === "th" ? ' class="on"' : "") + '>공연장 순위</button><button data-t="lk"' + (lsTab === "lk" ? ' class="on"' : "") + '>사물함</button><button data-t="ls"' + (lsTab === "ls" ? ' class="on"' : "") + '>매물</button></div><table>';
+  if (lsTab === "th") {
+    h += "<tr><th>" + esc(RKN[RK]) + "</th><th>공연장</th><th>좌석</th><th>최근접 사물함</th></tr>";
+    sortedTheaters().forEach((t) => { const i = THEATERS.indexOf(t); const n = isFinite(t.la) ? nearest(t.la, t.lo).lk[0] : null; h += '<tr data-k="th" data-i="' + i + '"><td>' + (rankOf(t) || "-") + "</td><td>" + esc(t.short || t.n) + "</td><td>" + esc((t.val && t.val.seats) || "미확인") + "</td><td>" + (n ? n.d + "m" : "-") + "</td></tr>"; });
+  } else if (lsTab === "lk") {
+    h += "<tr><th>사물함</th><th>층</th><th>영업</th><th>가격</th></tr>";
+    LOCK.forEach((l, i) => { h += '<tr data-k="lk" data-i="' + i + '"><td>' + esc(l.n) + (l.hid ? " <span class='muted'>숨은</span>" : "") + "</td><td>" + esc(l.fl || "-") + "</td><td>" + esc(l.h || "-") + "</td><td>" + esc(l.p1 || "-") + "</td></tr>"; });
+  } else {
+    h += "<tr><th>매물</th><th>층</th><th>보증금/월세</th><th>권리금</th></tr>";
+    const all = Object.keys(ST.ls).filter((k) => !ST.ls[k].del).map((k) => ["ls", k, ST.ls[k]]).concat(LISTINGS.map((x, i) => ["lsd", i, x]));
+    if (!all.length) h += "<tr><td colspan='4' class='muted'>아직 없음 — 오른쪽 위 '+ 매물'로 추가</td></tr>";
+    all.forEach(([t, i, x]) => { h += '<tr data-k="' + t + '" data-i="' + i + '"><td>' + esc(x.name || "매물") + "</td><td>" + esc(x.floor || "-") + "</td><td>" + won(x.dep) + "/" + won(x.rent) + "</td><td>" + eok(x.prem) + "</td></tr>"; });
+  }
+  P.innerHTML = h + "</table>";
+  P.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => { lsTab = b.dataset.t; renderList(); });
+  P.querySelectorAll("tr[data-i]").forEach((tr) => tr.onclick = () => {
+    const t = tr.dataset.k, i = t === "ls" ? tr.dataset.i : +tr.dataset.i; sel = null; select(t, i);
+    const p = t === "th" ? [THEATERS[i].la, THEATERS[i].lo] : t === "lk" ? lkPos(LOCK[i]) : t === "ls" ? [ST.ls[i].la, ST.ls[i].lo] : [LISTINGS[i].la, LISTINGS[i].lo];
+    if (isFinite(p[0])) map.panTo(new naver.maps.LatLng(p[0], p[1]));
+    if (innerWidth < 900) $("#ls").classList.remove("open"), $("#lsBtn").classList.remove("on");
+  });
+}
+$("#lsBtn").onclick = () => { const o = $("#ls").classList.toggle("open"); $("#lsBtn").classList.toggle("on", o); if (o) renderList(); };
+$("#lgBtn").onclick = () => { const o = $("#lg").classList.toggle("open"); $("#lgBtn").classList.toggle("on", o); };
+document.querySelectorAll("#lg input[data-ly]").forEach((cb) => { cb.checked = !!layerOn[cb.dataset.ly]; cb.onchange = () => { layerOn[cb.dataset.ly] = cb.checked; LS("lockermap_layers", layerOn); MK[cb.dataset.ly].forEach((m) => m.setMap(cb.checked ? map : null)); }; });
+(function () { const s = $("#rkSel"); Object.keys(RKN).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = RKN[k]; s.appendChild(o); }); if (!RKN[RK]) RK = "total"; s.value = RK; const note = () => { $("#rkNote").textContent = RKNOTE[RK] || ""; }; note(); s.onchange = () => { RK = s.value; LS("lockermap_rank", RK); note(); drawAll(); if (sel) renderDetail(); if ($("#ls").classList.contains("open")) renderList(); }; })();
+
+(function () { const s = $("#gapR"); s.value = String(GAPR); s.onchange = () => { GAPR = +s.value; LS("lockermap_gapr", GAPR); drawAll(); }; })();
+
+/* ---------- 시작 ---------- */
+function initMap() {
+  let c0 = new naver.maps.LatLng(37.5822, 127.0022), z0 = 17;
+  const v = LS("lockermap_view"); if (v && isFinite(v.la) && v.la > 37.5 && v.la < 37.7) { c0 = new naver.maps.LatLng(v.la, v.lo); z0 = v.z || 17; }   // 마지막에 보던 위치로 열기
+  map = new naver.maps.Map("map", { center: c0, zoom: z0, minZoom: 13, scaleControl: true, mapDataControl: false, logoControlOptions: { position: naver.maps.Position.BOTTOM_LEFT } });
+  naver.maps.Event.addListener(map, "idle", () => { const c = map.getCenter(); LS("lockermap_view", { la: +c.lat().toFixed(6), lo: +c.lng().toFixed(6), z: map.getZoom() }); });
+  naver.maps.Event.addListener(map, "click", (e) => {
+    if (pickCb) { const cb = pickCb; endPick(); cb(+e.coord.lat().toFixed(7), +e.coord.lng().toFixed(7)); return; }
+    if (sel && !isEditing()) closeDetail();   // 빈 곳 누르면 닫힘
+  });
+  drawAll(); syBadge(syOn() ? "시트 연결됨" : "시트 미연결"); syAll();
+  setInterval(() => { if (!document.hidden) syAll(); }, 60000);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) syFlush(); else syPull(); });
+}
+const sc = document.createElement("script");
+sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=lqh247mo03&submodules=geocoder";
+function boot() { try { initMap(); } catch (e) { document.body.insertAdjacentHTML("beforeend", "<p style='position:absolute;top:60px;left:10px;z-index:99;background:#fff;padding:4px 8px'>지도 오류: " + esc(e.message) + "</p>"); } }
+sc.onload = () => { let done = false; const go = () => { if (!done) { done = true; boot(); } }; try { if (naver.maps.Service && naver.maps.Map) go(); else { naver.maps.onJSContentLoaded = go; setTimeout(go, 5000); } } catch (e) { go(); } };
+document.head.appendChild(sc);
+</script></body></html>
