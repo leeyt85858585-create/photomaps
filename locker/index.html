@@ -80,7 +80,8 @@ button,input,select,textarea{font:inherit;color:inherit}
   <label><input type="checkbox" data-ly="ls" checked><span class="sw" style="background:var(--ls);transform:rotate(45deg) scale(.8);border-radius:2px"></span>부동산 매물</label>
   <label><input type="checkbox" data-ly="ex" checked><span class="sw" style="background:#0f766e;border-radius:3px"></span>혜화역 출구</label>
   <label><input type="checkbox" data-ly="ring"><span class="sw" style="border:2px solid #0f766e;border-radius:50%"></span>출구 도보 3분·5분 원</label>
-  <label><input type="checkbox" data-ly="gap" checked><span class="sw" style="border:2px dashed #dc2626;border-radius:50%"></span>사물함 공백 (상위 10 공연장 150m 내 경쟁 사물함 없음)</label>
+  <label><input type="checkbox" data-ly="gap" checked><span class="sw" style="border:2px dashed #dc2626;border-radius:50%"></span>빈자리 공연장 (반경 안에 경쟁 사물함 없음)</label>
+  <div style="display:flex;gap:6px;align-items:center;padding-left:22px;font-size:12px">반경 <select id="gapR" style="padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option>30</option><option selected>50</option><option>100</option><option>150</option></select> m</div>
   <h4>순위 기준</h4>
   <select id="rkSel" style="width:100%;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--bg)"></select>
   <p class="muted" id="rkNote"></p>
@@ -187,6 +188,7 @@ const LSF = ["floor", "area", "dep", "rent", "prem", "mng", "elec", "sign", "use
 let map = null, sel = null, layerOn = Object.assign({ th: true, lk: true, hid: true, ls: true, ex: true, ring: false, gap: true }, LS("lockermap_layers") || {});
 const MK = { th: [], lk: [], hid: [], ls: [], ex: [], ring: [], gap: [] };
 let RK = (LS("lockermap_rank") || "total");
+let GAPR = +(LS("lockermap_gapr") || 50);
 
 function rankOf(t) { return (t.rk && t.rk[RK]) || null; }
 function sortedTheaters() { return THEATERS.slice().sort((a, b) => (rankOf(a) || 999) - (rankOf(b) || 999) || a.n.localeCompare(b.n, "ko")); }
@@ -208,9 +210,9 @@ function drawTheaters() {
   });
   // 사물함 공백: 상위 10 공연장 중 150m 안에 경쟁 사물함·숨은 보관소가 없는 곳
   sortedTheaters().filter((t) => rankOf(t) && rankOf(t) <= 10 && isFinite(t.la)).forEach((t) => {
-    const near = LOCK.some((l) => { if (l.hid) return false; const p = lkPos(l); return dist(t.la, t.lo, p[0], p[1]) <= 150; });
+    const near = LOCK.some((l) => { if (l.hid) return false; const p = lkPos(l); return dist(t.la, t.lo, p[0], p[1]) <= GAPR; });
     if (near) return;
-    const c = new naver.maps.Circle({ map: layerOn.gap ? map : null, center: new naver.maps.LatLng(t.la, t.lo), radius: 150, strokeColor: "#dc2626", strokeOpacity: .9, strokeWeight: 2, strokeStyle: "dash", fillColor: "#dc2626", fillOpacity: .06, clickable: false });
+    const c = new naver.maps.Circle({ map: layerOn.gap ? map : null, center: new naver.maps.LatLng(t.la, t.lo), radius: GAPR, strokeColor: "#dc2626", strokeOpacity: .9, strokeWeight: 2, strokeStyle: "dash", fillColor: "#dc2626", fillOpacity: .06, clickable: false });
     MK.gap.push(c);
   });
 }
@@ -259,7 +261,7 @@ function nearHtml(la, lo, selfLock, selfTh) {
   if (n.ex) h += "<dt>가까운 출구</dt><dd>" + esc(n.ex.e.no) + " · " + n.ex.d + "m (" + walk(n.ex.d) + ")</dd>";
   const lks = n.lk.filter((x) => x.l !== selfLock);
   if (lks[0]) h += "<dt>가까운 경쟁</dt><dd>" + esc(lks[0].l.n) + " · " + lks[0].d + "m</dd>";
-  h += "<dt>150m 내 경쟁</dt><dd>" + lks.filter((x) => x.d <= 150).length + "곳</dd>";
+  h += "<dt>50m 내 경쟁</dt><dd>" + lks.filter((x) => x.d <= 50).length + "곳</dd><dt>150m 내 경쟁</dt><dd>" + lks.filter((x) => x.d <= 150).length + "곳</dd>";
   h += "<dt>상위10 공연장</dt><dd>" + (n.th.filter((x) => x.t !== selfTh).length ? n.th.filter((x) => x.t !== selfTh).slice(0, 4).map((x) => rankOf(x.t) + "위 " + esc(x.t.short || x.t.n) + " " + x.d + "m").join("<br>") : "순위 미확정") + "</dd>";
   h += "<dt>300m 내 상위10</dt><dd>" + n.th.filter((x) => x.t !== selfTh && x.d <= 300).length + "곳</dd></dl></div>";
   return h;
@@ -368,6 +370,8 @@ $("#lsBtn").onclick = () => { const o = $("#ls").classList.toggle("open"); $("#l
 $("#lgBtn").onclick = () => { const o = $("#lg").classList.toggle("open"); $("#lgBtn").classList.toggle("on", o); };
 document.querySelectorAll("#lg input[data-ly]").forEach((cb) => { cb.checked = !!layerOn[cb.dataset.ly]; cb.onchange = () => { layerOn[cb.dataset.ly] = cb.checked; LS("lockermap_layers", layerOn); MK[cb.dataset.ly].forEach((m) => m.setMap(cb.checked ? map : null)); }; });
 (function () { const s = $("#rkSel"); Object.keys(RKN).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = RKN[k]; s.appendChild(o); }); if (!RKN[RK]) RK = "total"; s.value = RK; const note = () => { $("#rkNote").textContent = RKNOTE[RK] || ""; }; note(); s.onchange = () => { RK = s.value; LS("lockermap_rank", RK); note(); drawAll(); if (sel) renderDetail(); if ($("#ls").classList.contains("open")) renderList(); }; })();
+
+(function () { const s = $("#gapR"); s.value = String(GAPR); s.onchange = () => { GAPR = +s.value; LS("lockermap_gapr", GAPR); drawAll(); }; })();
 
 /* ---------- 시작 ---------- */
 function initMap() {
