@@ -4,7 +4,7 @@
 @media (prefers-color-scheme:dark){:root{--bg:#12181d;--surface:#1a232a;--ink:#e5ecf1;--muted:#9aa9b5;--line:#2c3841;--accent:#62b9d8;color-scheme:dark}}
 *{box-sizing:border-box}html,body{margin:0;height:100%}body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font);overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
-#map{position:absolute;inset:0}
+#map{position:fixed!important;top:0;left:0;width:100vw;height:100vh;height:100dvh}
 .top{position:absolute;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));display:flex;gap:6px;align-items:center;z-index:20;pointer-events:none}
 .top>*{pointer-events:auto}
 .ttl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:700;font-size:14px;white-space:nowrap}
@@ -254,14 +254,14 @@ function nearest(la, lo) {
   const th = sortedTheaters().filter((t) => rankOf(t) && rankOf(t) <= 10 && isFinite(t.la)).map((t) => ({ t, d: dist(la, lo, t.la, t.lo) })).sort((a, b) => a.d - b.d);
   return { ex, lk, th };
 }
-function nearHtml(la, lo, selfLock) {
+function nearHtml(la, lo, selfLock, selfTh) {
   const n = nearest(la, lo); let h = '<div class="sec"><h3>주변 거리 (직선, 도보 75m/분 환산)</h3><dl>';
   if (n.ex) h += "<dt>가까운 출구</dt><dd>" + esc(n.ex.e.no) + " · " + n.ex.d + "m (" + walk(n.ex.d) + ")</dd>";
   const lks = n.lk.filter((x) => x.l !== selfLock);
   if (lks[0]) h += "<dt>가까운 경쟁</dt><dd>" + esc(lks[0].l.n) + " · " + lks[0].d + "m</dd>";
   h += "<dt>150m 내 경쟁</dt><dd>" + lks.filter((x) => x.d <= 150).length + "곳</dd>";
-  h += "<dt>상위10 공연장</dt><dd>" + (n.th.length ? n.th.slice(0, 4).map((x) => rankOf(x.t) + "위 " + esc(x.t.short || x.t.n) + " " + x.d + "m").join("<br>") : "순위 미확정") + "</dd>";
-  h += "<dt>300m 내 상위10</dt><dd>" + n.th.filter((x) => x.d <= 300).length + "곳</dd></dl></div>";
+  h += "<dt>상위10 공연장</dt><dd>" + (n.th.filter((x) => x.t !== selfTh).length ? n.th.filter((x) => x.t !== selfTh).slice(0, 4).map((x) => rankOf(x.t) + "위 " + esc(x.t.short || x.t.n) + " " + x.d + "m").join("<br>") : "순위 미확정") + "</dd>";
+  h += "<dt>300m 내 상위10</dt><dd>" + n.th.filter((x) => x.t !== selfTh && x.d <= 300).length + "곳</dd></dl></div>";
   return h;
 }
 function links(name, la, lo) { return '<div class="links"><a target="_blank" rel="noopener" href="https://map.naver.com/p/search/' + encodeURIComponent(name) + '">네이버 지도</a><a target="_blank" rel="noopener" href="https://map.kakao.com/link/map/' + encodeURIComponent(name) + "," + la + "," + lo + '">카카오맵</a></div>'; }
@@ -273,7 +273,7 @@ function renderDetail() {
     h += "<h2>" + esc(t.n) + "</h2><span class='bdg th'>공연장</span>" + (rankOf(t) ? "<span class='bdg'>" + esc(RKN[RK]) + " " + rankOf(t) + "위</span>" : "");
     h += "<dl>" + row("좌석", t.seats ? esc(t.seats) : "미확인") + row("주소", esc(t.a || "")) + row("메모", esc(t.note || "")) + "</dl>";
     h += '<div class="sec"><h3>항목별 순위</h3><dl>' + Object.keys(RKN).map((k) => row(RKN[k], r[k] ? r[k] + "위" + (t.val && t.val[k] != null ? " <span class='muted'>(" + esc(t.val[k]) + ")</span>" : "") : "<span class='muted'>순위 밖·미확인</span>")).join("") + "</dl></div>";
-    h += nearHtml(t.la, t.lo) + links(t.n, t.la, t.lo);
+    h += nearHtml(t.la, t.lo, null, t) + links(t.n, t.la, t.lo);
   } else if (sel.t === "lk") {
     const l = LOCK[sel.i], x = lkInfo(l), p = lkPos(l);
     h += "<h2>" + esc(l.n) + "</h2><span class='bdg " + (l.hid ? "hid'>숨은 보관소" : "lk'>경쟁 사물함") + "</span>";
