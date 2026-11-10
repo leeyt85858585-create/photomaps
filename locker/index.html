@@ -385,6 +385,7 @@ function initMap() {
 }
 const sc = document.createElement("script");
 sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=lqh247mo03&submodules=geocoder";
-sc.onload = () => { try { initMap(); } catch (e) { document.body.insertAdjacentHTML("beforeend", "<p style='position:absolute;top:60px;left:10px;z-index:99;background:#fff'>지도 오류: " + esc(e.message) + "</p>"); } };
+function boot() { try { initMap(); } catch (e) { document.body.insertAdjacentHTML("beforeend", "<p style='position:absolute;top:60px;left:10px;z-index:99;background:#fff;padding:4px 8px'>지도 오류: " + esc(e.message) + "</p>"); } }
+sc.onload = () => { let done = false; const go = () => { if (!done) { done = true; boot(); } }; try { if (naver.maps.Service && naver.maps.Map) go(); else { naver.maps.onJSContentLoaded = go; setTimeout(go, 5000); } } catch (e) { go(); } };
 document.head.appendChild(sc);
 </script></body></html>
