@@ -64,7 +64,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </style></head><body>
 <div id="map"></div>
 <div class="top">
-  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 3</small></div>
+  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 4</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -92,7 +92,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </div>
 <div class="panel" id="ls"></div>
 <div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
-<script src="data.js?v=3"></script>
+<script src="data.js?v=4"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -223,10 +223,11 @@ function lkInfo(l) { return ST.lk[lkKey(l)] || {}; }
 function lkPos(l) { const p = lkInfo(l).pos; return (Array.isArray(p) && isFinite(p[0])) ? p : [l.la, l.lo]; }
 function drawLockers() {
   clear("lk"); clear("hid"); const seen = {};
+  THEATERS.forEach((t) => { if (isFinite(t.la)) seen[(+t.la).toFixed(5) + "," + (+t.lo).toFixed(5)] = 1; });   // 공연장과 같은 건물이면 옆으로 비킴
   LOCK.forEach((l, i) => {
     const p = lkPos(l), pk = p[0].toFixed(5) + "," + p[1].toFixed(5), dup = seen[pk] = (seen[pk] || 0) + 1;   // 같은 건물은 옆으로 비켜 그림
     const ly = l.hid ? "hid" : "lk";
-    mk(p, '<div class="mk' + (isSel("lk", i) ? " sel" : "") + '" style="left:' + ((dup - 1) * 20) + 'px"><div class="lk-m' + (l.hid ? " hid" : "") + '">' + (l.hid ? "숨" : "보") + '</div></div>', 20, () => select("lk", i), ly);
+    mk(p, '<div class="mk' + (isSel("lk", i) ? " sel" : "") + '" style="left:' + ((dup - 1) * 22) + 'px"><div class="lk-m' + (l.hid ? " hid" : "") + '">' + (l.hid ? "숨" : "보") + '</div></div>', 20, () => select("lk", i), ly);
   });
   try { drawTheaters(); } catch (e) {}
 }
