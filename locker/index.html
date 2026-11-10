@@ -64,7 +64,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </style></head><body>
 <div id="map"></div>
 <div class="top">
-  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 1</small></div>
+  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 2</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -79,7 +79,8 @@ button,input,select,textarea{font:inherit;color:inherit}
   <label><input type="checkbox" data-ly="hid" checked><span class="sw" style="background:var(--hid);border-radius:3px"></span>숨은 보관소 (겸업·극장 내)</label>
   <label><input type="checkbox" data-ly="ls" checked><span class="sw" style="background:var(--ls);transform:rotate(45deg) scale(.8);border-radius:2px"></span>부동산 매물</label>
   <label><input type="checkbox" data-ly="ex" checked><span class="sw" style="background:#0f766e;border-radius:3px"></span>혜화역 출구</label>
-  <label><input type="checkbox" data-ly="ring"><span class="sw" style="border:2px solid #0f766e;border-radius:50%"></span>출구 도보 3분·5분 원</label>
+  <label><input type="checkbox" data-ly="ring"><span class="sw" style="border:2px solid #0f766e;border-radius:50%"></span>1·2번 출구 도보 원</label>
+  <div style="display:flex;gap:6px;align-items:center;padding-left:22px;font-size:12px">표시 <select id="ringM" style="padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option value="35">3분·5분</option><option value="3">3분 (240m)</option><option value="5">5분 (400m)</option></select></div>
   <label><input type="checkbox" data-ly="gap" checked><span class="sw" style="border:2px dashed #dc2626;border-radius:50%"></span>빈자리 공연장 (반경 안에 경쟁 사물함 없음)</label>
   <div style="display:flex;gap:6px;align-items:center;padding-left:22px;font-size:12px">반경 <select id="gapR" style="padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--bg)"><option>30</option><option selected>50</option><option>100</option><option>150</option></select> m</div>
   <h4>순위 기준</h4>
@@ -189,6 +190,8 @@ let map = null, sel = null, layerOn = Object.assign({ th: true, lk: true, hid: t
 const MK = { th: [], lk: [], hid: [], ls: [], ex: [], ring: [], gap: [] };
 let RK = (LS("lockermap_rank") || "total");
 let GAPR = +(LS("lockermap_gapr") || 50);
+const RING_EX = ["1번", "2번"];
+let RINGM = String(LS("lockermap_ringm") || "35");
 
 function rankOf(t) { return (t.rk && t.rk[RK]) || null; }
 function sortedTheaters() { return THEATERS.slice().sort((a, b) => (rankOf(a) || 999) - (rankOf(b) || 999) || a.n.localeCompare(b.n, "ko")); }
@@ -237,7 +240,8 @@ function drawExits() {
   EXITS.forEach((e) => {
     if (!isFinite(e.la)) return;
     mk([e.la, e.lo], '<div class="mk"><div class="ex-m">' + e.no + '</div></div>', 15, null, "ex");
-    [[240, .9], [400, .5]].forEach(([r, o]) => MK.ring.push(new naver.maps.Circle({ map: layerOn.ring ? map : null, center: new naver.maps.LatLng(e.la, e.lo), radius: r, strokeColor: "#0f766e", strokeOpacity: o, strokeWeight: 1.5, fillOpacity: 0, clickable: false })));
+    if (!RING_EX.includes(e.no)) return;
+    [[240, .9, "3"], [400, .5, "5"]].filter((x) => RINGM.includes(x[2])).forEach(([r, o]) => MK.ring.push(new naver.maps.Circle({ map: layerOn.ring ? map : null, center: new naver.maps.LatLng(e.la, e.lo), radius: r, strokeColor: "#0f766e", strokeOpacity: o, strokeWeight: 1.5, fillOpacity: 0, clickable: false })));
   });
 }
 function drawAll() { drawLockers(); drawListings(); drawExits(); }
@@ -371,6 +375,7 @@ $("#lgBtn").onclick = () => { const o = $("#lg").classList.toggle("open"); $("#l
 document.querySelectorAll("#lg input[data-ly]").forEach((cb) => { cb.checked = !!layerOn[cb.dataset.ly]; cb.onchange = () => { layerOn[cb.dataset.ly] = cb.checked; LS("lockermap_layers", layerOn); MK[cb.dataset.ly].forEach((m) => m.setMap(cb.checked ? map : null)); }; });
 (function () { const s = $("#rkSel"); Object.keys(RKN).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = RKN[k]; s.appendChild(o); }); if (!RKN[RK]) RK = "total"; s.value = RK; const note = () => { $("#rkNote").textContent = RKNOTE[RK] || ""; }; note(); s.onchange = () => { RK = s.value; LS("lockermap_rank", RK); note(); drawAll(); if (sel) renderDetail(); if ($("#ls").classList.contains("open")) renderList(); }; })();
 
+(function () { const s = $("#ringM"); s.value = RINGM; s.onchange = () => { RINGM = s.value; LS("lockermap_ringm", RINGM); if (!layerOn.ring) { const c = document.querySelector('[data-ly="ring"]'); if (c) { c.checked = true; c.dispatchEvent(new Event("change")); } } drawExits(); }; })();
 (function () { const s = $("#gapR"); s.value = String(GAPR); s.onchange = () => { GAPR = +s.value; LS("lockermap_gapr", GAPR); drawAll(); }; })();
 
 /* ---------- 시작 ---------- */
