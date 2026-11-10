@@ -345,7 +345,7 @@ function renderList() {
   const P = $("#ls"); let h = '<div class="tabs"><button data-t="th"' + (lsTab === "th" ? ' class="on"' : "") + '>공연장 순위</button><button data-t="lk"' + (lsTab === "lk" ? ' class="on"' : "") + '>사물함</button><button data-t="ls"' + (lsTab === "ls" ? ' class="on"' : "") + '>매물</button></div><table>';
   if (lsTab === "th") {
     h += "<tr><th>" + esc(RKN[RK]) + "</th><th>공연장</th><th>좌석</th><th>최근접 사물함</th></tr>";
-    sortedTheaters().forEach((t) => { const i = THEATERS.indexOf(t); const n = isFinite(t.la) ? nearest(t.la, t.lo).lk[0] : null; h += '<tr data-k="th" data-i="' + i + '"><td>' + (rankOf(t) || "-") + "</td><td>" + esc(t.short || t.n) + "</td><td>" + esc(t.seats || "미확인") + "</td><td>" + (n ? n.d + "m" : "-") + "</td></tr>"; });
+    sortedTheaters().forEach((t) => { const i = THEATERS.indexOf(t); const n = isFinite(t.la) ? nearest(t.la, t.lo).lk[0] : null; h += '<tr data-k="th" data-i="' + i + '"><td>' + (rankOf(t) || "-") + "</td><td>" + esc(t.short || t.n) + "</td><td>" + esc((t.val && t.val.seats) || "미확인") + "</td><td>" + (n ? n.d + "m" : "-") + "</td></tr>"; });
   } else if (lsTab === "lk") {
     h += "<tr><th>사물함</th><th>층</th><th>영업</th><th>가격</th></tr>";
     LOCK.forEach((l, i) => { h += '<tr data-k="lk" data-i="' + i + '"><td>' + esc(l.n) + (l.hid ? " <span class='muted'>숨은</span>" : "") + "</td><td>" + esc(l.fl || "-") + "</td><td>" + esc(l.h || "-") + "</td><td>" + esc(l.p1 || "-") + "</td></tr>"; });
