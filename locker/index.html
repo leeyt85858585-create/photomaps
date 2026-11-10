@@ -64,7 +64,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </style></head><body>
 <div id="map"></div>
 <div class="top">
-  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 2</small></div>
+  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 3</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -92,7 +92,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </div>
 <div class="panel" id="ls"></div>
 <div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
-<script src="data.js?v=1"></script>
+<script src="data.js?v=3"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -397,4 +397,21 @@ sc.src = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=lqh247mo03&subm
 function boot() { try { initMap(); } catch (e) { document.body.insertAdjacentHTML("beforeend", "<p style='position:absolute;top:60px;left:10px;z-index:99;background:#fff;padding:4px 8px'>지도 오류: " + esc(e.message) + "</p>"); } }
 sc.onload = () => { let done = false; const go = () => { if (!done) { done = true; boot(); } }; try { if (naver.maps.Service && naver.maps.Map) go(); else { naver.maps.onJSContentLoaded = go; setTimeout(go, 5000); } } catch (e) { go(); } };
 document.head.appendChild(sc);
+
+/* 새 버전 자동 반영: 열 때·앱으로 돌아올 때 서버 버전 확인 */
+(function () {
+  const cur = ($("#ver").textContent.match(/·\s*(\d+)/) || [])[1];
+  async function chk() {
+    try {
+      const r = await fetch(location.pathname + "?nc=" + Date.now(), { cache: "no-store" });
+      const t = await r.text(), m = t.match(/id="ver">[^<]*·\s*(\d+)/);
+      if (m && cur && m[1] !== cur && !isEditing() && sessionStorage.getItem("lm_rl") !== m[1]) {
+        sessionStorage.setItem("lm_rl", m[1]);
+        location.replace(location.pathname + "?v=" + m[1] + location.hash);
+      }
+    } catch (e) {}
+  }
+  setTimeout(chk, 1500);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) chk(); });
+})();
 </script></body></html>
