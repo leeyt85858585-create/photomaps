@@ -5,21 +5,22 @@
 *{box-sizing:border-box}html,body{margin:0;height:100%}body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font);overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
 #map{position:fixed!important;top:0;left:0;width:100vw;height:100vh;height:100dvh}
-.top{position:absolute;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));display:flex;gap:6px;align-items:center;z-index:20;pointer-events:none}
+.top{position:absolute;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));display:flex;flex-wrap:wrap;gap:6px;align-items:center;z-index:20;pointer-events:none}
 .top>*{pointer-events:auto}
 .ttl{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:700;font-size:14px;white-space:nowrap}
 .ttl small{font-weight:400;color:var(--muted);font-size:11px;margin-left:4px}
 .btn{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:5px 10px;box-shadow:0 1px 4px rgba(0,0,0,.12);cursor:pointer;font-size:13px;white-space:nowrap}
 .btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 .sp{flex:1}
-#syB{font-size:11px;color:var(--muted)}
+#syB{font-size:11px;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:560px){.ttl .full{display:none}.ttl{padding:4px 8px;font-size:13px}.btn{padding:5px 8px}#syB{max-width:64px}}
 .panel{position:absolute;z-index:25;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.18);overflow:auto}
-#lg{right:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:250px;max-height:70vh;padding:10px 12px;display:none}
+#lg{right:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:250px;max-width:calc(100vw - 16px);max-height:calc(100vh - 60px);max-height:calc(100dvh - 60px);padding:10px 12px;display:none}
 #lg.open{display:block}
 #lg label{display:flex;gap:8px;align-items:center;padding:3px 0;cursor:pointer}
 #lg .sw{width:14px;height:14px;display:inline-block;flex:none}
 #lg h4{margin:8px 0 2px;font-size:12px;color:var(--muted);font-weight:500}
-#ls{left:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:330px;max-height:62vh;display:none}
+#ls{left:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:330px;max-width:calc(100vw - 16px);max-height:62vh;display:none}
 #ls.open{display:block}
 #ls table{border-collapse:collapse;width:100%;font-size:12.5px}
 #ls th,#ls td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -55,7 +56,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .mk{position:relative;width:0;height:0}
 .th-m{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:var(--th);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);font-size:11px}
 .th-m.dim{background:#a99bc9}
-.th-l{position:absolute;left:12px;top:-8px;font-size:11px;white-space:nowrap;color:#3b2a66;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;font-weight:500}
+.th-l{pointer-events:none;position:absolute;left:12px;top:-8px;font-size:11px;white-space:nowrap;color:#3b2a66;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;font-weight:500}
 .lk-m{position:absolute;width:18px;height:18px;transform:translate(-50%,-50%);border-radius:4px;background:var(--lk);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
 .lk-m.hid{background:var(--hid)}
 .ls-m{position:absolute;left:-7px;top:-7px;width:14px;height:14px;transform:rotate(45deg);background:var(--ls);border:2px solid #fff;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.45)}
@@ -64,7 +65,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </style></head><body>
 <div id="map"></div>
 <div class="top">
-  <div class="ttl">대학로 사물함 지도<small id="ver">v26.11.10 · 4</small></div>
+  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v26.11.11 · 5</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -92,7 +93,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </div>
 <div class="panel" id="ls"></div>
 <div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
-<script src="data.js?v=4"></script>
+<script src="data.js?v=5"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -116,7 +117,7 @@ const dec = (t) => JSON.parse(decodeURIComponent(escape(atob(t))));
   try { const o = dec(decodeURIComponent(m[1])); if (o && o.u && o.t) { sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : sy.who || "" }; LS(SYK, sy); } } catch (e) {}
   try { history.replaceState(null, "", location.pathname); } catch (e) {}
 })();
-function syBadge(t) { $("#syB").textContent = t; $("#syInfo").textContent = syOn() ? "연결됨" + (sy.who ? " · " + sy.who : "") + " — 기존 임장지도와 같은 시트에 저장됩니다." : "미연결 — 이 기기에만 저장됩니다. 기존 임장지도 초대 링크를 붙여넣으면 연결됩니다."; }
+function syBadge(t) { const b = $("#syB"); b.title = t; b.textContent = /완료/.test(t) ? "✓ " + (t.match(/\d{1,2}:\d{2}/) || [""])[0] : /실패/.test(t) ? "⚠ 저장 실패" : /중/.test(t) ? "⟳ 동기화" : /미연결/.test(t) ? "미연결" : /연결됨/.test(t) ? "✓ 연결됨" : t; $("#syInfo").textContent = syOn() ? "연결됨" + (sy.who ? " · " + sy.who : "") + " — 기존 임장지도와 같은 시트에 저장됩니다." : "미연결 — 이 기기에만 저장됩니다. 기존 임장지도 초대 링크를 붙여넣으면 연결됩니다."; }
 $("#syLink").addEventListener("input", () => {
   const v = $("#syLink").value; const m = /[#?&]sync=([A-Za-z0-9+\/=_%-]+)/.exec(v); if (!m) return;
   try { const o = dec(decodeURIComponent(m[1])); if (o && o.u && o.t) { sy = { url: String(o.u), token: String(o.t), who: o.w === "이" || o.w === "홍" ? o.w : sy.who || "" }; LS(SYK, sy); $("#syLink").value = ""; syAll(); } } catch (e) { syBadge("초대 링크를 읽지 못했습니다"); }
@@ -223,11 +224,11 @@ function lkInfo(l) { return ST.lk[lkKey(l)] || {}; }
 function lkPos(l) { const p = lkInfo(l).pos; return (Array.isArray(p) && isFinite(p[0])) ? p : [l.la, l.lo]; }
 function drawLockers() {
   clear("lk"); clear("hid"); const seen = {};
-  THEATERS.forEach((t) => { if (isFinite(t.la)) seen[(+t.la).toFixed(5) + "," + (+t.lo).toFixed(5)] = 1; });   // 공연장과 같은 건물이면 옆으로 비킴
+  const thAt = {}; THEATERS.forEach((t) => { if (isFinite(t.la)) thAt[(+t.la).toFixed(5) + "," + (+t.lo).toFixed(5)] = 1; });   // 공연장과 같은 건물이면 왼쪽으로 비킴(오른쪽은 공연장 이름)
   LOCK.forEach((l, i) => {
-    const p = lkPos(l), pk = p[0].toFixed(5) + "," + p[1].toFixed(5), dup = seen[pk] = (seen[pk] || 0) + 1;   // 같은 건물은 옆으로 비켜 그림
+    const p = lkPos(l), pk = p[0].toFixed(5) + "," + p[1].toFixed(5), dup = seen[pk] = (seen[pk] || 0) + 1, off = thAt[pk] ? -22 * dup : (dup - 1) * 22;   // 같은 건물은 옆으로 비켜 그림
     const ly = l.hid ? "hid" : "lk";
-    mk(p, '<div class="mk' + (isSel("lk", i) ? " sel" : "") + '" style="left:' + ((dup - 1) * 22) + 'px"><div class="lk-m' + (l.hid ? " hid" : "") + '">' + (l.hid ? "숨" : "보") + '</div></div>', 20, () => select("lk", i), ly);
+    mk(p, '<div class="mk' + (isSel("lk", i) ? " sel" : "") + '" style="left:' + off + 'px"><div class="lk-m' + (l.hid ? " hid" : "") + '">' + (l.hid ? "숨" : "보") + '</div></div>', 40, () => select("lk", i), ly);
   });
   try { drawTheaters(); } catch (e) {}
 }
