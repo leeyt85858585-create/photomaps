@@ -65,6 +65,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .mk{position:relative;width:0;height:0}
 .th-m{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:var(--th);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);font-size:11px}
 .th-m.dim{background:#a99bc9}
+.th-m.t2{background:#8b7bb8;font-size:10px}.th-l.t2{font-size:10px;color:#5b4d85;top:-7px;left:10px}
 .th-l{pointer-events:none;position:absolute;left:12px;top:-8px;font-size:11px;white-space:nowrap;color:#3b2a66;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;font-weight:500}
 .lk-m{position:absolute;width:18px;height:18px;transform:translate(-50%,-50%);border-radius:4px;background:var(--lk);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
 .lk-m.hid{background:var(--hid)}
@@ -72,10 +73,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ex-m{position:absolute;transform:translate(-50%,-50%);background:#0f766e;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;border:1px solid #fff;white-space:nowrap}
 .sel .th-m,.sel .lk-m{box-shadow:0 0 0 3px #facc15}.sel .ls-m{background:#1b1300;border-color:#fbbf24}
 </style></head><body>
-<!-- 옛 버전 자동반영용: id="ver">· 7 -->
+<!-- 옛 버전 자동반영용: id="ver">· 8 -->
 <div id="map"></div>
 <div class="top">
-  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v7</small></div>
+  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v8</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -103,7 +104,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </div>
 <div class="panel" id="ls"></div>
 <div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
-<script src="data.js?v=7"></script>
+<script src="data.js?v=8"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -219,8 +220,8 @@ function drawTheaters() {
   clear("th"); clear("gap");
   THEATERS.forEach((t, i) => {
     if (!isFinite(t.la)) return;
-    const r = rankOf(t), sz = r ? (r <= 3 ? 30 : r <= 10 ? 24 : 18) : 16;
-    mk([t.la, t.lo], '<div class="mk' + (isSel("th", i) ? " sel" : "") + '"><div class="th-m' + (r && r <= 10 ? "" : " dim") + '" style="width:' + sz + 'px;height:' + sz + 'px">' + (r || "·") + '</div>' + (r && r <= 10 ? '<div class="th-l">' + esc(t.short || t.n) + '</div>' : "") + '</div>', r && r <= 10 ? 30 - r : 5, () => select("th", i), "th");
+    const r = rankOf(t), sz = r ? (r <= 3 ? 30 : r <= 10 ? 24 : r <= 20 ? 20 : 16) : 16;
+    mk([t.la, t.lo], '<div class="mk' + (isSel("th", i) ? " sel" : "") + '"><div class="th-m' + (r && r <= 10 ? "" : r && r <= 20 ? " t2" : " dim") + '" style="width:' + sz + 'px;height:' + sz + 'px">' + (r || "·") + '</div>' + (r && r <= 20 ? '<div class="th-l' + (r > 10 ? " t2" : "") + '">' + esc(t.short || t.n) + '</div>' : "") + '</div>', r && r <= 20 ? 40 - r : 5, () => select("th", i), "th");
   });
   // 사물함 공백: 상위 10 공연장 중 150m 안에 경쟁 사물함·숨은 보관소가 없는 곳
   sortedTheaters().filter((t) => rankOf(t) && rankOf(t) <= 10 && isFinite(t.la)).forEach((t) => {
