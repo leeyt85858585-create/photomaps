@@ -22,6 +22,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 #lg h4{margin:8px 0 2px;font-size:12px;color:var(--muted);font-weight:500}
 #ls{left:8px;top:calc(max(8px,env(safe-area-inset-top)) + 40px);width:330px;max-width:calc(100vw - 16px);max-height:62vh;display:none}
 #ls.open{display:block}
+#ls .its{padding:0 4px 6px}
+#ls .lh{font-size:11px;color:var(--muted);padding:4px 8px}
+#ls .it{display:flex;gap:8px;align-items:flex-start;padding:7px 8px;border-bottom:1px solid var(--line);cursor:pointer}
+#ls .it:hover{background:rgba(13,106,138,.08)}
+#ls .it b{font-size:13.5px;font-weight:600}
+#ls .it .nm{min-width:0;flex:1}
+#ls .it .sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.35;word-break:keep-all}
+#ls .bd{flex:none;min-width:24px;height:22px;padding:0 5px;border-radius:11px;background:var(--th);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+#ls .it[data-k="lk"] .bd{background:var(--lk);border-radius:5px}#ls .bd.h{background:var(--hid)!important}
 #ls table{border-collapse:collapse;width:100%;font-size:12.5px}
 #ls th,#ls td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 #ls th{position:sticky;top:0;background:var(--surface);font-weight:500;color:var(--muted)}
@@ -63,9 +72,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ex-m{position:absolute;transform:translate(-50%,-50%);background:#0f766e;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;border:1px solid #fff;white-space:nowrap}
 .sel .th-m,.sel .lk-m{box-shadow:0 0 0 3px #facc15}.sel .ls-m{background:#1b1300;border-color:#fbbf24}
 </style></head><body>
+<!-- 옛 버전 자동반영용: id="ver">· 7 -->
 <div id="map"></div>
 <div class="top">
-  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v26.11.11 · 6</small></div>
+  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v7</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -93,7 +103,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </div>
 <div class="panel" id="ls"></div>
 <div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
-<script src="data.js?v=6"></script>
+<script src="data.js?v=7"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -350,22 +360,22 @@ function openForm(k) {
 /* ---------- 목록 ---------- */
 let lsTab = "th";
 function renderList() {
-  const P = $("#ls"); let h = '<div class="tabs"><button data-t="th"' + (lsTab === "th" ? ' class="on"' : "") + '>공연장 순위</button><button data-t="lk"' + (lsTab === "lk" ? ' class="on"' : "") + '>사물함</button><button data-t="ls"' + (lsTab === "ls" ? ' class="on"' : "") + '>매물</button></div><table>';
+  const P = $("#ls"); let h = '<div class="tabs"><button data-t="th"' + (lsTab === "th" ? ' class="on"' : "") + '>공연장 순위</button><button data-t="lk"' + (lsTab === "lk" ? ' class="on"' : "") + '>사물함</button><button data-t="ls"' + (lsTab === "ls" ? ' class="on"' : "") + '>매물</button></div><div class="its">';
+  const it = (k, i, badge, name, sub) => '<div class="it" data-k="' + k + '" data-i="' + i + '">' + (badge != null ? '<span class="bd' + (badge === "숨" ? " h" : "") + '">' + esc(badge) + "</span>" : "") + '<div class="nm"><b>' + esc(name) + '</b><div class="sub">' + sub + "</div></div></div>";
   if (lsTab === "th") {
-    h += "<tr><th>" + esc(RKN[RK]) + "</th><th>공연장</th><th>좌석</th><th>최근접 사물함</th></tr>";
-    sortedTheaters().forEach((t) => { const i = THEATERS.indexOf(t); const n = isFinite(t.la) ? nearest(t.la, t.lo).lk[0] : null; h += '<tr data-k="th" data-i="' + i + '"><td>' + (rankOf(t) || "-") + "</td><td>" + esc(t.short || t.n) + "</td><td>" + esc((t.val && t.val.seats) || "미확인") + "</td><td>" + (n ? n.d + "m" : "-") + "</td></tr>"; });
+    h += '<div class="lh">' + esc(RKN[RK]) + " 순</div>";
+    sortedTheaters().forEach((t) => { const i = THEATERS.indexOf(t); const n = isFinite(t.la) ? nearest(t.la, t.lo).lk[0] : null; const v = t.val && t.val[RK];
+      h += it("th", i, rankOf(t) || "-", t.short || t.n, [v ? esc(v) : "", t.val && t.val.seats && RK !== "seats" ? esc(t.val.seats) : "", n ? "최근접 사물함 " + n.d + "m" : ""].filter(Boolean).join(" · ")); });
   } else if (lsTab === "lk") {
-    h += "<tr><th>사물함</th><th>층</th><th>영업</th><th>가격</th></tr>";
-    LOCK.forEach((l, i) => { h += '<tr data-k="lk" data-i="' + i + '"><td>' + esc(l.n) + (l.hid ? " <span class='muted'>숨은</span>" : "") + "</td><td>" + esc(l.fl || "-") + "</td><td>" + esc(l.h || "-") + "</td><td>" + esc(l.p1 || "-") + "</td></tr>"; });
+    LOCK.forEach((l, i) => { h += it("lk", i, l.hid ? "숨" : "보", l.n, [esc(l.fl || "층 미확인"), esc(l.p1 || "가격 미확인"), esc(l.h || "")].filter(Boolean).join(" · ")); });
   } else {
-    h += "<tr><th>매물</th><th>층</th><th>보증금/월세</th><th>권리금</th></tr>";
     const all = Object.keys(ST.ls).filter((k) => !ST.ls[k].del).map((k) => ["ls", k, ST.ls[k]]).concat(LISTINGS.map((x, i) => ["lsd", i, x]));
-    if (!all.length) h += "<tr><td colspan='4' class='muted'>아직 없음 — 오른쪽 위 '+ 매물'로 추가</td></tr>";
-    all.forEach(([t, i, x]) => { h += '<tr data-k="' + t + '" data-i="' + i + '"><td>' + esc(x.name || "매물") + "</td><td>" + esc(x.floor || "-") + "</td><td>" + won(x.dep) + "/" + won(x.rent) + "</td><td>" + eok(x.prem) + "</td></tr>"; });
+    if (!all.length) h += '<div class="lh">아직 없음 — 오른쪽 위 \'+ 매물\'로 추가</div>';
+    all.forEach(([t, i, x]) => { h += it(t, i, null, x.name || "매물", [esc(x.floor || "층 미확인"), "보증금 " + won(x.dep) + " / 월세 " + won(x.rent), "권리금 " + eok(x.prem)].join(" · ")); });
   }
-  P.innerHTML = h + "</table>";
+  P.innerHTML = h + "</div>";
   P.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => { lsTab = b.dataset.t; renderList(); });
-  P.querySelectorAll("tr[data-i]").forEach((tr) => tr.onclick = () => {
+  P.querySelectorAll(".it[data-i]").forEach((tr) => tr.onclick = () => {
     const t = tr.dataset.k, i = t === "ls" ? tr.dataset.i : +tr.dataset.i; sel = null; select(t, i);
     const p = t === "th" ? [THEATERS[i].la, THEATERS[i].lo] : t === "lk" ? lkPos(LOCK[i]) : t === "ls" ? [ST.ls[i].la, ST.ls[i].lo] : [LISTINGS[i].la, LISTINGS[i].lo];
     if (isFinite(p[0])) map.panTo(new naver.maps.LatLng(p[0], p[1]));
@@ -402,11 +412,11 @@ document.head.appendChild(sc);
 
 /* 새 버전 자동 반영: 열 때·앱으로 돌아올 때 서버 버전 확인 */
 (function () {
-  const cur = ($("#ver").textContent.match(/·\s*(\d+)/) || [])[1];
+  const cur = ($("#ver").textContent.match(/v(\d+)/) || [])[1];
   async function chk() {
     try {
       const r = await fetch(location.pathname + "?nc=" + Date.now(), { cache: "no-store" });
-      const t = await r.text(), m = t.match(/id="ver">[^<]*·\s*(\d+)/);
+      const t = await r.text(), m = t.match(/id="ver">v(\d+)</);
       if (m && cur && m[1] !== cur && !isEditing() && sessionStorage.getItem("lm_rl") !== m[1]) {
         sessionStorage.setItem("lm_rl", m[1]);
         location.replace(location.pathname + "?v=" + m[1] + location.hash);
