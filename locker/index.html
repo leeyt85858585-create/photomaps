@@ -4,6 +4,9 @@
 @media (prefers-color-scheme:dark){:root{--bg:#12181d;--surface:#1a232a;--ink:#e5ecf1;--muted:#9aa9b5;--line:#2c3841;--accent:#62b9d8;color-scheme:dark}}
 *{box-sizing:border-box}html,body{margin:0;height:100%}body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font);overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
+#locBtn{position:fixed;right:10px;bottom:calc(46px + env(safe-area-inset-bottom));z-index:20;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.18);font-size:20px;line-height:1;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center}
+#locBtn.on{color:#2563eb}#locBtn.wait{opacity:.6}
+.me{width:16px;height:16px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 2px rgba(37,99,235,.4);transform:translate(-8px,-8px)}
 #map{position:fixed!important;top:0;left:0;width:100vw;height:100vh;height:100dvh}
 .top{position:absolute;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));display:flex;flex-wrap:wrap;gap:6px;align-items:center;z-index:20;pointer-events:none}
 .top>*{pointer-events:auto}
@@ -73,10 +76,10 @@ button,input,select,textarea{font:inherit;color:inherit}
 .ex-m{position:absolute;transform:translate(-50%,-50%);background:#0f766e;color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;border:1px solid #fff;white-space:nowrap}
 .sel .th-m,.sel .lk-m{box-shadow:0 0 0 3px #facc15}.sel .ls-m{background:#1b1300;border-color:#fbbf24}
 </style></head><body>
-<!-- 옛 버전 자동반영용: id="ver">· 9 -->
+<!-- 옛 버전 자동반영용: id="ver">· 10 -->
 <div id="map"></div>
 <div class="top">
-  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v9</small></div>
+  <div class="ttl"><span class="full">대학로 </span>사물함 지도<small id="ver">v10</small></div>
   <button class="btn" id="lsBtn">목록</button>
   <div class="sp"></div>
   <span class="btn" id="syB">시트 확인 중</span>
@@ -104,7 +107,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 </div>
 <div class="panel" id="ls"></div>
 <div class="panel" id="dt"><button class="x" id="dtX" aria-label="닫기">×</button><div id="dtB"></div></div>
-<script src="data.js?v=9"></script>
+<script src="data.js?v=10"></script>
 <script>
 "use strict";
 const $ = (s) => document.querySelector(s);
@@ -426,5 +429,30 @@ document.head.appendChild(sc);
   }
   setTimeout(chk, 1500);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) chk(); });
+})();
+
+/* 내 위치: 버튼 누르면 따라다니며 표시(걸으며 임장용), 다시 누르면 내 위치로 이동 */
+(function () {
+  const b = document.createElement("button"); b.id = "locBtn"; b.title = "내 위치"; b.textContent = "◎"; document.body.appendChild(b);
+  let wid = null, me = null, mk = null, acc = null, first = true;
+  const draw = () => {
+    if (!map || !me) return; const pos = new naver.maps.LatLng(me.la, me.lo);
+    if (mk) mk.setPosition(pos); else mk = new naver.maps.Marker({ map, position: pos, clickable: false, zIndex: 100, icon: { content: '<div class="me"></div>', anchor: new naver.maps.Point(0, 0) } });
+    const r = Math.min(me.acc || 0, 150);
+    if (acc) { acc.setCenter(pos); acc.setRadius(r); } else acc = new naver.maps.Circle({ map, center: pos, radius: r, strokeColor: "#2563eb", strokeOpacity: .3, strokeWeight: 1, fillColor: "#2563eb", fillOpacity: .08, clickable: false });
+    if (first) { first = false; map.setCenter(pos); if (map.getZoom() < 17) map.setZoom(17); }
+  };
+  b.onclick = () => {
+    if (wid !== null && me) { map.setCenter(new naver.maps.LatLng(me.la, me.lo)); return; }
+    if (!navigator.geolocation) { b.title = "위치 사용 불가"; alert("이 브라우저는 위치를 지원하지 않아요"); return; }
+    b.classList.add("wait"); first = true;
+    try {
+      wid = navigator.geolocation.watchPosition((p) => {
+        me = { la: p.coords.latitude, lo: p.coords.longitude, acc: p.coords.accuracy }; b.classList.remove("wait"); b.classList.add("on"); draw();
+      }, (e) => { b.classList.remove("wait", "on"); try { navigator.geolocation.clearWatch(wid); } catch (x) {} wid = null;
+        alert(e && e.code === 1 ? "위치 권한이 꺼져 있어요. 브라우저 설정에서 이 사이트의 위치를 허용해 주세요." : "위치를 못 찾았어요. 잠시 뒤 다시 눌러 주세요."); },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 });
+    } catch (e) { b.classList.remove("wait"); wid = null; }
+  };
 })();
 </script></body></html>
